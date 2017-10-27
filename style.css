@@ -1,0 +1,14 @@
+body {
+  font-family: Menlo, Consolas, monospace;
+  color: #444;
+}
+
+.mix-line {
+  cursor: pointer;
+}
+
+ul {
+  padding-left: 1em;
+  line-height: 1.5em;
+  list-style-type: square;
+}

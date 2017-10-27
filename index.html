@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>gibolin</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <script src="https://unpkg.com/vue"></script>
+</head>
+<body>
+
+	<script type="text/x-template" id="mix-template">
+		<li>
+			<div
+			 class="mix-line"
+			 @click="toggle">
+				{{ title }}
+				<span>[{{open ? '-' : '+'}}]</span>
+
+			<div v-if="open">
+				<audio controls>
+				  <source src="dexter.mp3" type="audio/mpeg">
+				  Your browser does not support the audio element.
+				</audio>
+			</div>
+
+			</div>
+		</li>
+	</script>
+
+    <ul id="app">
+		<li
+		  is="mix-item"
+		  v-for="mix in mixes"
+		  v-bind:title="mix.title"
+		></li>
+    </ul>
+
+    <script>
+		Vue.component('mix-item', {
+			template: '#mix-template',
+			props: ['title'],
+			data: function () {
+				return {
+					open: false
+				}
+			},
+			methods: {
+				toggle: function (){ this.open = !this.open }
+			},
+		})
+		var app = new Vue({
+			el: '#app',
+			data: {
+				mixes: [
+				{title: 'DJ Kicks 1'},
+				{title: 'DJ Kicks 2'},
+				{title: 'DJ Kicks 3'},
+				]
+			}
+		})
+    </script>
+</body>
+</html>
