@@ -7,7 +7,7 @@ import (
     "strings"
     "errors"
     "flag"
-	"github.com/gorilla/handlers"
+    "github.com/gorilla/handlers"
     "github.com/gorilla/mux"
 
     "golang.org/x/net/context"
@@ -17,10 +17,6 @@ import (
 
     "google.golang.org/api/option"
 )
-
-type TokenVerifier struct {
-    Auth firebaseauth.Client
-}
 
 func GetAuthHeader(r *http.Request) (string, error) {
     authHeader := r.Header.Get("Authorization")
@@ -35,9 +31,8 @@ func GetAuthHeader(r *http.Request) (string, error) {
     return authHeaderSplit[1], nil
 }
 
-func (t *TokenVerifier) Handler(h http.Handler) http.Handler {
+func SecureHandler(h http.Handler, authClient firebaseauth.Client) http.Handler {
     return http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
-        authClient := t.Auth
         idToken, err := GetAuthHeader(r)
         if err != nil {
             http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -78,11 +73,7 @@ func main() {
         log.Fatalf("error getting Auth client: %v\n", err)
     }
 
-    tokenVerifier := &TokenVerifier {
-        Auth: *authClient,
-    }
-
     r := mux.NewRouter()
-    r.Handle("/", tokenVerifier.Handler(rootHandler))
+    r.Handle("/", SecureHandler(rootHandler, *authClient))
     http.ListenAndServe(*addr, handlers.LoggingHandler(os.Stdout, r))
 }
