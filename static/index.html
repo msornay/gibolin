@@ -30,6 +30,7 @@
             user.getIdToken().then(function(accessToken) {
               document.getElementById('title-container').textContent = 'Welcome '+displayName;
               document.getElementById('quickstart-sign-in-status').textContent = 'signed in';
+              document.getElementById('account-details').textContent = accessToken;
              // document.getElementById('account-details').textContent = JSON.stringify({
              //   displayName: displayName,
              //   email: email,
@@ -126,7 +127,7 @@
 		    	            }
         	        	})  
                     </script>
-                  <!-- <div id="account-details"></div> -->
+                  <div id="account-details"></div>
                    <button class="mdl-button mdl-js-button mdl-button--raised" id="generate-url" name="generateurl">Generate stream URL</button>
 
                   <!-- Container where we'll display the user details -->
