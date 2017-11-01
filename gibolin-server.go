@@ -7,6 +7,9 @@ import (
     "strings"
     "errors"
     "flag"
+    "io/ioutil"
+    "encoding/json"
+
     "github.com/gorilla/handlers"
     "github.com/gorilla/mux"
 
@@ -55,6 +58,33 @@ var rootHandler = http.HandlerFunc(func (w http.ResponseWriter, r *http.Request)
     w.Write([]byte(msg))
 })
 
+type File struct {
+    Name  string `json:"name"`
+    Dir   bool   `json:"dir"`
+}
+
+var dirListHandler = http.HandlerFunc(func (w http.ResponseWriter, r *http.Request){
+    var toList []File
+    vars := mux.Vars(r)
+    dir := vars["dir"]
+    if dir == "" {
+        dir = "."
+    }
+    files, err := ioutil.ReadDir(dir)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+    }
+    for _, file  := range files {
+        f := &File {
+            Name: file.Name(),
+            Dir: file.IsDir(),
+        }
+        toList = append(toList, *f)
+    }
+    json.NewEncoder(w).Encode(toList)
+})
+
 func main() {
     var (
         addr = flag.String("listen.addr", ":3000", "listening address")
@@ -75,5 +105,7 @@ func main() {
 
     r := mux.NewRouter()
     r.Handle("/", SecureHandler(rootHandler, *authClient))
+    r.Handle("/list", SecureHandler(dirListHandler, *authClient))
+    r.Handle("/list/{dir}", SecureHandler(dirListHandler, *authClient))
     http.ListenAndServe(*addr, handlers.LoggingHandler(os.Stdout, r))
 }
