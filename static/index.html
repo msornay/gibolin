@@ -2,13 +2,16 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>Gibolin</title>
-  
+    <title>gibol.in</title>
+
     <!-- Material Design Theming -->
     <link rel="stylesheet" href="https://code.getmdl.io/1.1.3/material.orange-indigo.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <script defer src="https://code.getmdl.io/1.1.3/material.min.js"></script>
+
+    <!-- vue.js -->
     <script src="https://unpkg.com/vue"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue-resource@1.3.4"></script>
 
     <!-- custom stylesheet -->
     <link rel="stylesheet" href="main.css">
@@ -84,7 +87,7 @@
                 			 @click="toggle">
 		            	    	{{ title }}
 			            	    <span>[{{open ? '-' : '+'}}]</span>
-    
+
             			    <div v-if="open">
 		            		    <audio controls>
     		    		          <source src="dexter.mp3" type="audio/mpeg">
@@ -119,13 +122,22 @@
                 		var app = new Vue({
 		                	el: '#app',
         		        	data: {
-	    	        		    mixes: [
-                				{title: 'DJ Kicks 1'},
-		                		{title: 'DJ Kicks 2'},
-				                {title: 'DJ Kicks 3'},
-        	        			]   
-		    	            }
-        	        	})  
+	    	        		    mixes: [],
+		    	            },
+                            created: function () {
+                                console.log('app created')
+                                this.getCatalog();
+                            },
+                            methods: {
+                                getCatalog: function () {
+                                    this.$http.get('http://localhost:3000/list/').success(function(list) {
+                                      console.log(list);
+                                    }).error(function(error) {
+                                      console.log(error);
+                                    });
+                                },
+                            },
+        	        	})
                     </script>
                   <div id="account-details"></div>
                    <button class="mdl-button mdl-js-button mdl-button--raised" id="generate-url" name="generateurl">Generate stream URL</button>

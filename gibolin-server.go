@@ -30,6 +30,7 @@ var (
 	rootPath       = flag.String("rootpath", "./music", "Root path to serve from")
 	addr           = flag.String("listen.addr", ":3000", "listening address")
 	serviceAccount = flag.String("account", "gibolin-service-account.json", "Path to service account file")
+	noFirebase     = flag.Bool("no-firebase", false, "mock firebase auth")
 
 	streamTokens *TokenMap
 )
