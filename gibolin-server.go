@@ -228,7 +228,9 @@ func main() {
 	r.Handle("/audio/{path:.*}/playlist.m3u8", StreamTokenHandler(http.HandlerFunc(playlistHandler)))
 	r.Handle("/audio/{path:.*}/{_}", StreamTokenHandler(http.StripPrefix("/audio/", http.FileServer(http.Dir(*rootPath)))))
 
-	http.ListenAndServe(*addr, handlers.LoggingHandler(os.Stdout, r))
+	allowedHeaders := handlers.AllowedHeaders([]string{"Authorization"})
+	allowedMethods := handlers.AllowedMethods([]string{"GET", "HEAD", "OPTIONS"})
+	http.ListenAndServe(*addr, handlers.LoggingHandler(os.Stdout, handlers.CORS(allowedHeaders, allowedMethods)(r)))
 
 	close(stop)
 }
