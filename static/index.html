@@ -32,11 +32,35 @@
                         props: ['title'],
                         data: function () {
                             return {
-                                open: false
+                                open: false,
+                                albumList: [],
                             }
                         },
                         methods: {
-                            toggle: function (){ this.open = !this.open }
+                            toggle: function (){
+                                this.open = !this.open;
+                                this.$http.get('http://localhost:3000/list/'+this.title).then(response => {
+                                    this.albumList = JSON.parse(response.body);
+                                }, response => {
+                                    console.log("Cannot fetch album for "+artist);
+                                });
+                            }
+                        },
+                    })
+                    Vue.component('album-item', {
+                        template: '#album-template',
+                        props: ['artist', 'album'],
+                        data: function () {
+                            return {
+                                open: false,
+                                m3u8: null,
+                            }
+                        },
+                        methods: {
+                            toggle: function (){
+                                this.open = !this.open;
+                                this.m3u8 = "Get playlist"
+                            }
                         },
                     })
                     Vue.http.headers.common['Authorization'] = 'Bearer '+accessToken;
@@ -95,22 +119,26 @@
                 <!-- main container details -->
                 <div class="mdl-card__supporting-text mdl-color-text--grey-600">
                     <script type="text/x-template" id="mix-template">
-    		            <li>
-            			    <div
-    	    	        	 class="mix-line"
-                			 @click="toggle">
-		            	    	{{ title }}
-			            	    <span>[{{open ? '-' : '+'}}]</span>
-
+                        <li> {{ title }} <span class="mix-line" @click="toggle">[{{open ? '-' : '+'}}]</span>
             			    <div v-if="open">
-		            		    <audio controls>
-    		    		          <source src="dexter.mp3" type="audio/mpeg">
-            	    			  Your browser does not support the audio element.
-		        	    	    </audio>
+                                <ul>
+                                    <li is="album-item" v-for="a in albumList" v-bind:artist="title" v-bind:album="a.name" v-if="a.dir"></li>
+                                </ul>
 			                </div>
             		    	</div>
     		            </li>
             	    </script>
+                    <script type="text/x-template" id="album-template">
+                        <li>{{ album }}<span class="mix-line" @click="toggle">[{{open ? '-' : '+'}}]</span>
+                            <div v-if="open">
+                                <ul>
+                                    <li>{{m3u8}}</li>
+                                    <li style="cursor:not-allowed">zip</li>
+                                </ul>
+                            </div>
+                            </div>
+                        </li>
+                    </script>
                     <ul id="rootlist">
                         <li
                             is="dir-item"
