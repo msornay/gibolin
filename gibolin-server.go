@@ -193,11 +193,12 @@ func playlistHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "audio/mpegurl; charset=utf-8")
+	token := r.URL.Query().Get("token")
 	for _, d := range dirs {
 		name := d.Name()
 		// XXX(msy) Use FlaC magic instead
 		if strings.HasSuffix(name, "flac") {
-			fmt.Fprintf(w, "%s\n", name)
+			fmt.Fprintf(w, "%s?token=%s\n", name, token)
 		}
 	}
 }
