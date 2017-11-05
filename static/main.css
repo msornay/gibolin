@@ -5,7 +5,7 @@ html, body {
 a {
   text-decoration: none;
 }
-li a {
+/*li a {
   text-decoration: underline;
   color: #0288d1;
 }
@@ -13,7 +13,7 @@ ul {
   padding-left: 1em;
   line-height: 1.5em;
   list-style-type: square;
-}
+}*/
 .mix-line {
   cursor: pointer;
 }
@@ -27,11 +27,7 @@ ul {
 .mdl-layout__header-row {
   padding: 0;
 }
-.quickstart-user-details-container, .user-details-container {
-  margin-top: 20px;
-  line-height: 25px;
-}
-#quickstart-sign-in-status, #sign-in-status {
+#sign-in-status {
   font-weight: bold;
 }
 pre {

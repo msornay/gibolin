@@ -26,7 +26,7 @@
                 var displayName = user.displayName;
                 user.getIdToken().then(function(accessToken) {
                     document.getElementById('title-container').textContent = 'Welcome '+displayName;
-                    document.getElementById('quickstart-sign-in-status').textContent = 'signed in';
+                    document.getElementById('sign-in-status').textContent = 'signed in';
                     Vue.component('dir-item', {
                         template: '#mix-template',
                         props: ['title'],
@@ -106,12 +106,12 @@
         </script>
     </head>
     <body>
-        <div class="demo-layout mdl-layout mdl-js-layout mdl-layout--fixed-header">
+        <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
         <!-- Header section containing title -->
-        <header class="mdl-layout__header mdl-color-text--white mdl-color--light-blue-700">
+        <header class="mdl-layout__header mdl-color-text--white mdl-color--indigo-500">
             <div class="mdl-cell mdl-cell--12-col mdl-cell--12-col-tablet mdl-grid">
                 <div class="mdl-layout__header-row mdl-cell mdl-cell--12-col mdl-cell--12-col-tablet mdl-cell--8-col-desktop">
-                    <a href="/"><h3>Gibolin</h3></a>
+                    <a href="/"><h3>gibol.in</h3></a>
                 </div>
             </div>
         </header>
@@ -121,33 +121,37 @@
         <div class="mdl-cell mdl-cell--12-col mdl-cell--12-col-tablet mdl-grid">
             <div class="mdl-card mdl-shadow--2dp mdl-cell mdl-cell--12-col mdl-cell--12-col-tablet mdl-cell--12-col-desktop">
                 <!-- main container header -->
-                <div class="mdl-card__title mdl-color--light-blue-600 mdl-color-text--white">
+                <div class="mdl-card__title mdl-color--indigo-500 mdl-color-text--white">
                     <h2 id="title-container" class="mdl-card__title-text"></h2>
                 </div>
                 <!-- main container details -->
                 <div class="mdl-card__supporting-text mdl-color-text--grey-600">
                     <script type="text/x-template" id="mix-template">
-                        <li> {{ title }} <span class="mix-line" @click="toggle">[{{open ? '-' : '+'}}]</span>
+                        <li>
+                            <i class="material-icons">folder</i>
+                            <span class="mix-line" @click="toggle">[{{open ? '-' : '+'}}]</span>
+                            {{ title }}
             			    <div v-if="open">
                                 <ul>
                                     <li is="album-item" v-for="a in albumList" v-bind:artist="title" v-bind:album="a.name" v-if="a.dir"></li>
                                 </ul>
 			                </div>
-            		    	</div>
     		            </li>
             	    </script>
                     <script type="text/x-template" id="album-template">
-                        <li>{{ album }}<span class="mix-line" @click="toggle">[{{open ? '-' : '+'}}]</span>
+                        <li>
+                            <i class="material-icons">folder</i>
+                            <span class="mix-line" @click="toggle">[{{open ? '-' : '+'}}]</span>
+                            {{ album }}
                             <div v-if="open">
                                 <ul>
                                     <li class="mix-line" @click="generateLink">{{m3u8}}</li>
                                     <li style="cursor:not-allowed">zip</li>
                                 </ul>
                             </div>
-                            </div>
                         </li>
                     </script>
-                    <ul id="rootlist">
+                    <ul id="rootlist" class="mdl-list">
                         <li
                             is="dir-item"
                             v-for="d in rootList"
@@ -156,14 +160,15 @@
                         ></li>
                     </ul>
                     <button class="mdl-button mdl-js-button mdl-button--raised" id="generate-url" name="generateurl">Generate stream URL</button>
-                    <!-- Container where we'll display the user details -->
-                    <div class="quickstart-user-details-container">
-                        Firebase sign-in status: <span id="quickstart-sign-in-status">Unknown</span>
-                    </div>
                 </div>
             </div>
         </div>
         </main>
+        <footer class="mdl-mini-footer">
+            <div class="mdl-mini-footer--left-section">
+                Firebase sign-in status: <span id="sign-in-status">Unknown</span>
+            </div>
+        </footer>
         </div>
     </body>
 </html>
