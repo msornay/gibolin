@@ -25,8 +25,8 @@
                 // User is signed in.
                 var displayName = user.displayName;
                 user.getIdToken().then(function(accessToken) {
-                    document.getElementById('title-container').textContent = 'Welcome '+displayName;
-                    document.getElementById('sign-in-status').textContent = 'signed in';
+                    // document.getElementById('title-container').textContent = 'Welcome '+displayName;
+                    document.getElementById('sign-in-status').textContent = 'Signed in as: '+user.email;
                     Vue.component('dir-item', {
                         template: '#mix-template',
                         props: ['title'],
@@ -42,34 +42,50 @@
                                 this.$http.get('http://localhost:3000/list/'+this.title).then(response => {
                                     this.albumList = JSON.parse(response.body);
                                 }, response => {
-                                    console.log("Cannot fetch album for "+artist);
+                                    console.log("Cannot fetch album for "+serie);
                                 });
                             }
                         },
                     })
                     Vue.component('album-item', {
                         template: '#album-template',
-                        props: ['artist', 'album'],
+                        props: ['serie', 'album'],
                         data: function () {
                             return {
                                 open: false,
-                                m3u8: null,
+                                m3u8Text: "m3u8",
+                                m3u8Link: null,
+
+                                showCopyModal: false,
                             }
                         },
                         methods: {
                             toggle: function (){
                                 this.open = !this.open;
-                                this.m3u8 = "Get playlist"
                             },
                             generateLink: function () {
-                                this.$http.get('http://localhost:3000/token').then(response => {
-                                    token = JSON.parse(response.body).token;
-                                    this.m3u8 = "http://localhost:3000/audio/"+this.artist+"/"+this.album+"/playlist.m3u8?token="+token;
-                                }, response => {
-                                    console.log("Cannot get token from server");
-                                });
+                                if (!this.m3u8Link) {
+                                    this.$http.get('http://localhost:3000/token').then(response => {
+                                        token = JSON.parse(response.body).token;
+                                        this.m3u8Link = "http://localhost:3000/audio/"+this.serie+"/"+this.album+"/playlist.m3u8?token="+token;
+                                    }, response => {
+                                        console.log("Cannot get token from server");
+                                    });
+                                }
+                                this.showCopyModal = true
                             },
                         },
+                    })
+                    Vue.component('modal', {
+                        template: '#modal-template',
+                        props: ['link'],
+                        methods: {
+                            // Copy link to clipboard
+                            copyLink: function() {
+                                this.$refs.link.select();
+                                document.execCommand('copy');
+                            },
+                        }
                     })
                     Vue.http.headers.common['Authorization'] = 'Bearer '+accessToken;
                     var rootListVue = new Vue({
@@ -86,7 +102,7 @@
                                 this.$http.get('http://localhost:3000/list/').then(response => {
                                     this.rootList = JSON.parse(response.body);
                                 }, response => {
-                                    console.log("Cannot fetch list");  
+                                    console.log("Cannot fetch list");
                                 });
                             },
                         }
@@ -107,6 +123,7 @@
     </head>
     <body>
         <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+
         <!-- Header section containing title -->
         <header class="mdl-layout__header mdl-color-text--white mdl-color--indigo-500">
             <div class="mdl-cell mdl-cell--12-col mdl-cell--12-col-tablet mdl-grid">
@@ -119,54 +136,60 @@
         <!-- main container -->
         <main class="mdl-layout__content mdl-color--grey-100">
         <div class="mdl-cell mdl-cell--12-col mdl-cell--12-col-tablet mdl-grid">
-            <div class="mdl-card mdl-shadow--2dp mdl-cell mdl-cell--12-col mdl-cell--12-col-tablet mdl-cell--12-col-desktop">
-                <!-- main container header -->
-                <div class="mdl-card__title mdl-color--indigo-500 mdl-color-text--white">
-                    <h2 id="title-container" class="mdl-card__title-text"></h2>
-                </div>
-                <!-- main container details -->
-                <div class="mdl-card__supporting-text mdl-color-text--grey-600">
-                    <script type="text/x-template" id="mix-template">
-                        <li>
-                            <i class="material-icons">folder</i>
-                            <span class="mix-line" @click="toggle">[{{open ? '-' : '+'}}]</span>
-                            {{ title }}
-            			    <div v-if="open">
-                                <ul>
-                                    <li is="album-item" v-for="a in albumList" v-bind:artist="title" v-bind:album="a.name" v-if="a.dir"></li>
-                                </ul>
-			                </div>
-    		            </li>
-            	    </script>
-                    <script type="text/x-template" id="album-template">
-                        <li>
-                            <i class="material-icons">folder</i>
-                            <span class="mix-line" @click="toggle">[{{open ? '-' : '+'}}]</span>
-                            {{ album }}
-                            <div v-if="open">
-                                <ul>
-                                    <li class="mix-line" @click="generateLink">{{m3u8}}</li>
-                                    <li style="cursor:not-allowed">zip</li>
-                                </ul>
-                            </div>
-                        </li>
-                    </script>
-                    <ul id="rootlist" class="mdl-list">
-                        <li
-                            is="dir-item"
-                            v-for="d in rootList"
-                            v-bind:title="d.name"
-                            v-if="d.dir"
-                        ></li>
-                    </ul>
-                    <button class="mdl-button mdl-js-button mdl-button--raised" id="generate-url" name="generateurl">Generate stream URL</button>
-                </div>
-            </div>
+            <script type="text/x-template" id="mix-template">
+                <li>
+                    <span class="mix-line" @click="toggle">[{{open ? '-' : '+'}}]</span>
+                    {{ title }}
+                    <div v-if="open">
+                        <ul>
+                            <li is="album-item" v-for="a in albumList" v-bind:serie="title" v-bind:album="a.name" v-if="a.dir"></li>
+                        </ul>
+                    </div>
+                </li>
+            </script>
+            <script type="text/x-template" id="modal-template">
+                <transition name="modal">
+                    <div class="modal-mask">
+                    <div class="modal-wrapper">
+                    <div class="modal-container">
+                        <div class="modal-header">M3U8 URL</div>
+                        <div class="modal-body">
+                            <textarea rows="1" cols="40" style="overflow:hidden" wrap="off" ref="link">{{link}}</textarea>
+                            <i class="material-icons" v-on:click="copyLink">content_copy</i>
+                        </div>
+                        <div class="modal-footer">
+                            T <button class="modal-default-button" @click="$emit('close')">OK</button>
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </transition>
+            </script>
+            <script type="text/x-template" id="album-template">
+                <li>
+                    <span class="mix-line" @click="toggle">[{{open ? '-' : '+'}}]</span>
+                    {{ album }}
+                    <div v-if="open">
+                        <ul>
+                            <li class="mix-line" v-on:click="generateLink">m3u8</li>
+                            <!-- li style="cursor:not-allowed">zip</li -->
+                        </ul>
+                    </div>
+                    <modal v-if="showCopyModal" v-on:close="showCopyModal = false" v-bind:link="m3u8Link" />
+                </li>
+            </script>
+            <ul id="rootlist" class="mdl-list">
+                <li is="dir-item"
+                    v-for="d in rootList"
+                    v-bind:title="d.name"
+                    v-if="d.dir"
+                ></li>
+            </ul>
         </div>
         </main>
         <footer class="mdl-mini-footer">
             <div class="mdl-mini-footer--left-section">
-                Firebase sign-in status: <span id="sign-in-status">Unknown</span>
+                <span id="sign-in-status"></span>
             </div>
         </footer>
         </div>
