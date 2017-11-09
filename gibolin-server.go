@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -29,6 +30,7 @@ import (
 
 var (
 	rootPath       = flag.String("rootpath", "./music", "Root path to serve from")
+	baseUrl        = flag.String("base-url", "http://localhost:3000", "Base URL that should appear in playlists")
 	addr           = flag.String("listen.addr", ":3000", "listening address")
 	serviceAccount = flag.String("account", "gibolin-service-account.json", "Path to service account file")
 	// noFirebase     = flag.Bool("no-firebase", false, "mock firebase auth")
@@ -199,7 +201,6 @@ func issueTokenHandler(w http.ResponseWriter, r *http.Request) {
 func TokenHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := r.URL.Query().Get("token")
-
 		_, err := streamTokens.GetPath(token)
 		if err != nil {
 			http.Error(w, "missing or invalid token in query", http.StatusBadRequest)
@@ -224,6 +225,13 @@ func playlistHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// url.PathEscape() each path component
+	var parts []string
+	for _, p := range strings.Split(path, "/") {
+		parts = append(parts, url.PathEscape(p))
+	}
+	escPath := strings.Join(parts, "/")
+
 	files, err := ioutil.ReadDir(*rootPath + "/" + path)
 	if err != nil {
 		glog.Errorf("error reading directory: %s", err)
@@ -232,11 +240,19 @@ func playlistHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "audio/mpegurl; charset=utf-8")
+
+	// VLC seems to like this
+	fmt.Fprintln(w, "#EXTM3U")
+
 	for _, f := range files {
 		name := f.Name()
 		// XXX(msy) Use FlaC magic instead
 		if strings.HasSuffix(name, "flac") {
-			fmt.Fprintf(w, "%s?token=%s\n", name, token)
+			loc := *baseUrl + "/audio/" + escPath + "/" + url.PathEscape(name) + "?token=" + token
+			if glog.V(1) {
+				glog.Infof("playlist item: %s", loc)
+			}
+			fmt.Fprintln(w, loc)
 		}
 	}
 }
@@ -311,5 +327,4 @@ func main() {
 
 	glog.Info("Listening on", *addr)
 	log.Fatal(http.ListenAndServe(*addr, handlers.LoggingHandler(os.Stdout, handlers.CORS(allowedHeaders, allowedMethods)(r))))
-
 }
