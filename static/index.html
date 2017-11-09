@@ -39,7 +39,7 @@
                         methods: {
                             toggle: function (){
                                 this.open = !this.open;
-                                this.$http.get('http://localhost:3000/list/'+this.title).then(response => {
+                                this.$http.get('http://localhost:3001/list/'+this.title).then(response => {
                                     this.albumList = JSON.parse(response.body);
                                 }, response => {
                                     console.log("Cannot fetch album for "+serie);
@@ -65,9 +65,9 @@
                             },
                             generateLink: function () {
                                 if (!this.m3u8Link) {
-                                    this.$http.get('http://localhost:3000/token').then(response => {
+                                    this.$http.get('http://localhost:3001/token/'+this.serie+'/'+this.album).then(response => {
                                         token = JSON.parse(response.body).token;
-                                        this.m3u8Link = "http://localhost:3000/audio/"+this.serie+"/"+this.album+"/playlist.m3u8?token="+token;
+                                        this.m3u8Link = "http://localhost:3001/m3u8/"+token;
                                     }, response => {
                                         console.log("Cannot get token from server");
                                     });
@@ -99,7 +99,7 @@
                         },
                         methods: {
                             getCatalog: function () {
-                                this.$http.get('http://localhost:3000/list/').then(response => {
+                                this.$http.get('http://localhost:3001/list/').then(response => {
                                     this.rootList = JSON.parse(response.body);
                                 }, response => {
                                     console.log("Cannot fetch list");
@@ -171,7 +171,7 @@
                     {{ album }}
                     <div v-if="open">
                         <ul>
-                            <li class="mix-line" v-on:click="generateLink">m3u8</li>
+                            <div class="mix-line" v-on:click="generateLink">m3u8</div>
                             <!-- li style="cursor:not-allowed">zip</li -->
                         </ul>
                     </div>

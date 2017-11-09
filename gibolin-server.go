@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang/glog"
 	"google.golang.org/api/option"
 
 	"github.com/gorilla/handlers"
@@ -30,7 +31,7 @@ var (
 	rootPath       = flag.String("rootpath", "./music", "Root path to serve from")
 	addr           = flag.String("listen.addr", ":3000", "listening address")
 	serviceAccount = flag.String("account", "gibolin-service-account.json", "Path to service account file")
-	noFirebase     = flag.Bool("no-firebase", false, "mock firebase auth")
+	// noFirebase     = flag.Bool("no-firebase", false, "mock firebase auth")
 
 	streamTokens *TokenMap
 )
@@ -60,8 +61,7 @@ func FirebaseAuthHandler(authClient *firebaseauth.Client, h http.Handler) http.H
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
-		newReq := r.WithContext(context.WithValue(r.Context(), "user", token))
-		*r = *newReq
+		r = r.WithContext(context.WithValue(r.Context(), "user", token))
 		h.ServeHTTP(w, r)
 	})
 }
@@ -96,51 +96,60 @@ func dirListHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(toList)
 }
 
+type TokenMapEntry struct {
+	Created time.Time
+	Path    string
+}
+
 type TokenMap struct {
 	m   sync.RWMutex
 	ttl time.Duration
 
 	// token: creation time map
-	tokens map[string]time.Time
+	tokens map[string]TokenMapEntry
 }
 
-func (tm *TokenMap) IsValid(tok string) bool {
+func (tm *TokenMap) GetPath(tok string) (string, error) {
 	tm.m.Lock()
 	defer tm.m.Unlock()
 
-	creation, ok := tm.tokens[tok]
+	v, ok := tm.tokens[tok]
 	if !ok {
-		return false
+		return "", errors.New("token not found")
 	}
-	if time.Since(creation) > tm.ttl {
-		return false
+	if time.Since(v.Created) > tm.ttl {
+		return "", errors.New("token expired")
 	}
-	return true
+	return v.Path, nil
 }
 
 func NewTokenMap(ttl time.Duration) *TokenMap {
 	return &TokenMap{
-		tokens: make(map[string]time.Time),
+		tokens: make(map[string]TokenMapEntry),
 		ttl:    ttl,
 	}
 }
 
-func (tm *TokenMap) IssueToken() string {
+func (tm *TokenMap) IssueToken(path string) string {
 	b := make([]byte, 16)
 	rand.Read(b) // yolo
 	tok := base64.RawURLEncoding.EncodeToString(b)
 
 	tm.m.Lock()
 	defer tm.m.Unlock()
-	tm.tokens[tok] = time.Now()
+	tm.tokens[tok] = TokenMapEntry{
+		Created: time.Now(),
+		Path:    path,
+	}
+
 	return tok
 }
 
 func (tm *TokenMap) cleanup() {
 	tm.m.Lock()
 	defer tm.m.Unlock()
-	for tok, creation := range tm.tokens {
-		if time.Since(creation) > tm.ttl {
+	for tok, v := range tm.tokens {
+		if time.Since(v.Created) > tm.ttl {
 			delete(tm.tokens, tok)
 		}
 	}
@@ -164,19 +173,38 @@ func (tm *TokenMap) StartCleanupTask(t time.Duration) chan<- struct{} {
 }
 
 func issueTokenHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	path, ok := vars["path"]
+	if !ok || path == "" {
+		http.Error(w, "invalid path", http.StatusBadRequest)
+		return
+	}
+
+	_, err := os.Stat(*rootPath + "/" + path)
+	if err != nil {
+		if glog.V(1) {
+			glog.Infof("cannot stat: %s", path)
+		}
+		http.Error(w, "ressource not found", http.StatusNotFound)
+		return
+	}
+
 	json.NewEncoder(w).Encode(struct {
 		Token string `json:"token"`
 	}{
-		Token: streamTokens.IssueToken(),
+		Token: streamTokens.IssueToken(path),
 	})
 }
 
-func StreamTokenHandler(h http.Handler) http.Handler {
+func TokenHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := r.URL.Query().Get("token")
-		if !streamTokens.IsValid(token) {
+
+		_, err := streamTokens.GetPath(token)
+		if err != nil {
 			http.Error(w, "missing or invalid token in query", http.StatusBadRequest)
 			return
+
 		}
 		h.ServeHTTP(w, r)
 	})
@@ -184,18 +212,28 @@ func StreamTokenHandler(h http.Handler) http.Handler {
 
 func playlistHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	dir := *rootPath + "/" + vars["path"]
-	f, _ := os.Open(dir)
-	defer f.Close()
-	dirs, err := f.Readdir(-1)
-	if err != nil {
-		http.Error(w, "Error reading directory", http.StatusInternalServerError)
+	token, ok := vars["token"]
+	if !ok || token == "" {
+		http.Error(w, "invalid token", http.StatusBadRequest)
 		return
 	}
+
+	path, err := streamTokens.GetPath(token)
+	if err != nil {
+		http.Error(w, "playlist not found", http.StatusNotFound)
+		return
+	}
+
+	files, err := ioutil.ReadDir(*rootPath + "/" + path)
+	if err != nil {
+		glog.Errorf("error reading directory: %s", err)
+		http.Error(w, "error reading directory", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "audio/mpegurl; charset=utf-8")
-	token := r.URL.Query().Get("token")
-	for _, d := range dirs {
-		name := d.Name()
+	for _, f := range files {
+		name := f.Name()
 		// XXX(msy) Use FlaC magic instead
 		if strings.HasSuffix(name, "flac") {
 			fmt.Fprintf(w, "%s?token=%s\n", name, token)
@@ -203,18 +241,53 @@ func playlistHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// func zipHandler(w http.ResponseWriter, r *http.Request) {
+// 	vars := mux.Vars(r)
+// 	path, ok := vars["path"]
+// 	if !ok || path == "" {
+// 		http.Error(w, "invalid path", http.StatusBadRequest)
+// 		return
+// 	}
+//
+// 	dir := *rootPath + "/" + path
+// 	f, _ := os.Open(dir)
+// 	dirs, err := f.Readdir(-1)
+// 	f.Close()
+// 	if err != nil {
+// 		http.Error(w, "Error reading directory", http.StatusInternalServerError)
+// 		return
+// 	}
+//
+// 	w.Header().Set("Content-Type", "application/zip")
+// 	z := zip.NewWriter(w)
+// 	defer z.Close()
+// 	for _, d := range dirs {
+// 		zf, err := z.Create(d.Name())
+// 		if err != nil {
+// 			http.Error(w, "cannot create zip file", http.StatusInternalServerError)
+// 			return
+// 		}
+//
+// 		// XXX(msy) Use FlaC magic instead
+// 		if strings.HasSuffix(name, "flac") {
+// 			fmt.Fprintf(w, "%s?token=%s\n", name, token)
+// 		}
+// 	}
+//
+// }
+
 func main() {
 	flag.Parse()
 
 	opt := option.WithCredentialsFile(*serviceAccount)
 	app, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
-		log.Fatalf("error initializing app: %v\n", err)
+		glog.Fatalf("error initializing app: %v\n", err)
 	}
 
 	authClient, err := app.Auth(context.Background())
 	if err != nil {
-		log.Fatalf("error getting Auth client: %v\n", err)
+		glog.Fatalf("error getting Auth client: %v\n", err)
 	}
 
 	r := mux.NewRouter()
@@ -224,14 +297,19 @@ func main() {
 
 	streamTokens = NewTokenMap(1 * time.Hour)
 	stop := streamTokens.StartCleanupTask(10 * time.Second)
-	r.Handle("/token", FirebaseAuthHandler(authClient, http.HandlerFunc(issueTokenHandler)))
+	r.Handle("/token/{path:.*}", FirebaseAuthHandler(authClient, http.HandlerFunc(issueTokenHandler)))
 
-	r.Handle("/audio/{path:.*}/playlist.m3u8", StreamTokenHandler(http.HandlerFunc(playlistHandler)))
-	r.Handle("/audio/{path:.*}/{_}", StreamTokenHandler(http.StripPrefix("/audio/", http.FileServer(http.Dir(*rootPath)))))
+	r.Handle("/m3u8/{token}", http.HandlerFunc(playlistHandler))
+	// r.Handle("/zip/token", FirebaseAuthHandler(http.StripPrefix("/zip/", http.HandlerFunc(zipHandler))))
+
+	r.Handle("/audio/{path:.*}/{_}", TokenHandler(http.StripPrefix("/audio/", http.FileServer(http.Dir(*rootPath)))))
 
 	allowedHeaders := handlers.AllowedHeaders([]string{"Authorization"})
 	allowedMethods := handlers.AllowedMethods([]string{"GET", "HEAD", "OPTIONS"})
-	http.ListenAndServe(*addr, handlers.LoggingHandler(os.Stdout, handlers.CORS(allowedHeaders, allowedMethods)(r)))
 
-	close(stop)
+	defer close(stop)
+
+	glog.Info("Listening on", *addr)
+	log.Fatal(http.ListenAndServe(*addr, handlers.LoggingHandler(os.Stdout, handlers.CORS(allowedHeaders, allowedMethods)(r))))
+
 }
