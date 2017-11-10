@@ -56,6 +56,11 @@
 	transition: all .3s ease;
 }
 
+.modal-textarea {
+    width: 100%;
+    display: block;
+}
+
 .modal-btn {
 	width: 100%;
 	display: block;
