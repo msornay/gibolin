@@ -8,7 +8,7 @@ initApp = function() {
     firebase.auth().onAuthStateChanged(function(user) {
         if (user) {
             // User is signed in.
-            var apiAddr = "http://localhost:3001";
+            var apiAddr = "http://localhost:3000";
             var displayName = user.displayName;
             user.getIdToken().then(function(accessToken) {
                 document.getElementById('sign-in-status').textContent = 'Signed in as: '+user.email;

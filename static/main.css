@@ -69,6 +69,16 @@
 .copy-icon {
 	cursor: pointer;
 }
+
+/* Do not use hack css link color for this icon */
+.headset-icon {
+    border: 0;
+    color: black;
+}
+.headset-icon:hover {
+    color: black;
+    background-color: white;
+}
 /*
  * The following styles are auto-applied to elements with
  * transition="modal" when their visibility is toggled
