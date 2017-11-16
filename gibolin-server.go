@@ -29,10 +29,11 @@ import (
 )
 
 var (
-	rootPath       = flag.String("rootpath", "./music", "Root path to serve from")
-	baseUrl        = flag.String("base-url", "http://localhost:3000", "Base URL that should appear in playlists")
-	addr           = flag.String("listen.addr", ":3000", "listening address")
-	serviceAccount = flag.String("account", "gibolin-service-account.json", "Path to service account file")
+	rootPath        = flag.String("rootpath", "./music", "Root path to serve from")
+	baseUrl         = flag.String("base-url", "http://localhost:3000", "Base URL that should appear in playlists")
+	addr            = flag.String("listen.addr", ":3000", "listening address")
+	serviceAccount  = flag.String("account", "gibolin-service-account.json", "Path to service account file")
+	whitelistString = flag.String("whitelist", "", "comma-separated whitelist of emails")
 	// noFirebase     = flag.Bool("no-firebase", false, "mock firebase auth")
 
 	streamTokens *TokenMap
@@ -51,7 +52,7 @@ func getAuthHeader(r *http.Request) (string, error) {
 	return authHeaderSplit[1], nil
 }
 
-func FirebaseAuthHandler(authClient *firebaseauth.Client, h http.Handler) http.Handler {
+func FirebaseAuthHandler(authClient *firebaseauth.Client, whitelist map[string]bool, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		idToken, err := getAuthHeader(r)
 		if err != nil {
@@ -60,9 +61,26 @@ func FirebaseAuthHandler(authClient *firebaseauth.Client, h http.Handler) http.H
 		}
 		token, err := authClient.VerifyIDToken(idToken)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
+
+		if glog.V(1) {
+			glog.Infof("firebase token verified. token: %+v", token)
+		}
+
+		v, ok := token.Claims["email"]
+		if !ok {
+			http.Error(w, "invalid token claims", http.StatusForbidden)
+			return
+		}
+		email := v.(string)
+
+		if _, ok := whitelist[email]; !ok {
+			http.Error(w, "user not whitelisted", http.StatusForbidden)
+			return
+		}
+
 		r = r.WithContext(context.WithValue(r.Context(), "user", token))
 		h.ServeHTTP(w, r)
 	})
@@ -247,7 +265,7 @@ func playlistHandler(w http.ResponseWriter, r *http.Request) {
 	for _, f := range files {
 		name := f.Name()
 		// XXX(msy) Use FlaC magic instead
-		if strings.HasSuffix(name, "flac") {
+		if strings.HasSuffix(name, "flac") || strings.HasSuffix(name, "mp3") {
 			loc := *baseUrl + "/audio/" + escPath + "/" + url.PathEscape(name) + "?token=" + token
 			if glog.V(1) {
 				glog.Infof("playlist item: %s", loc)
@@ -306,14 +324,20 @@ func main() {
 		glog.Fatalf("error getting Auth client: %v\n", err)
 	}
 
+	whitelist := make(map[string]bool)
+	for _, email := range strings.Split(*whitelistString, ",") {
+		whitelist[email] = true
+	}
+	glog.Infof("user whitelist: %+v", whitelist)
+
 	r := mux.NewRouter()
-	r.Handle("/", FirebaseAuthHandler(authClient, http.HandlerFunc(rootHandler)))
-	r.Handle("/list", FirebaseAuthHandler(authClient, http.HandlerFunc(dirListHandler)))
-	r.Handle("/list/{dir:.*}", FirebaseAuthHandler(authClient, http.HandlerFunc(dirListHandler)))
+	r.Handle("/", FirebaseAuthHandler(authClient, whitelist, http.HandlerFunc(rootHandler)))
+	r.Handle("/list", FirebaseAuthHandler(authClient, whitelist, http.HandlerFunc(dirListHandler)))
+	r.Handle("/list/{dir:.*}", FirebaseAuthHandler(authClient, whitelist, http.HandlerFunc(dirListHandler)))
 
 	streamTokens = NewTokenMap(1 * time.Hour)
 	stop := streamTokens.StartCleanupTask(10 * time.Second)
-	r.Handle("/token/{path:.*}", FirebaseAuthHandler(authClient, http.HandlerFunc(issueTokenHandler)))
+	r.Handle("/token/{path:.*}", FirebaseAuthHandler(authClient, whitelist, http.HandlerFunc(issueTokenHandler)))
 
 	r.Handle("/m3u8/{token}", http.HandlerFunc(playlistHandler))
 	// r.Handle("/zip/token", FirebaseAuthHandler(http.StripPrefix("/zip/", http.HandlerFunc(zipHandler))))

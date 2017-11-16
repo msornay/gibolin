@@ -33,6 +33,7 @@ initApp = function() {
                         }
                     },
                 })
+
                 Vue.component('album-item', {
                     template: '#album-template',
                     props: ['serie', 'album'],
@@ -41,7 +42,6 @@ initApp = function() {
                             open: false,
                             m3u8Text: "m3u8",
                             m3u8Link: null,
-
                             showCopyModal: false,
                         }
                     },
@@ -103,6 +103,7 @@ initApp = function() {
         console.log(error);
     });
 };
+
 window.addEventListener('load', function() {
     initApp()
 });
