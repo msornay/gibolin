@@ -71,7 +71,7 @@ initApp = function() {
 
                 Vue.component('modal', {
                     template: '#modal-template',
-                    props: ['m3u8Link', 'mp3Source'],
+                    props: ['title', 'm3u8Link', 'mp3Source'],
                     methods: {
                         // Copy m3u8Link to clipboard
                         copyLink: function() {

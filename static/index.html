@@ -38,32 +38,27 @@
                     <div class="modal-mask">
                     <div class="modal-wrapper">
                     <div class="card modal-container">
-                        <div class="card-header">M3U8 URL</div>
+                        <div class="card-header">{{ title }}</div>
                         <div class="card-content">
+                            <h1>play v0</h1>
                             <audio controls v-bind:src="mp3Source">
                             browser does not support audio
                             </audio>
 
+                            <h1>m3u8</h1>
                             <div class="grid">
-                                <div class="cell -12of12">
+                                <div class="cell -10of12">
                                     <textarea class="modal-textarea" readonly rows="1" style="overflow:hidden" wrap="off" ref="m3u8Link">{{m3u8Link}}</textarea>
                                 </div>
-                            </div>
-
-                            <div class="grid">
-                                <div class="cell -1of12">
+                                <div class="cell">
                                     <i class="material-icons copy-icon" title="Copy link" v-on:click="copyLink">content_copy</i>
                                 </div>
-                                <div class="cell -1of12">
+                                <div class="cell">
                                     <a v-bind:href="m3u8Link" title="Open playlist" class="headset-icon"><i class="material-icons">open_in_new</i></a>
                                 </div>
                             </div>
 
-                            <div class="grid">
-                                <div class="cell -12of12">
-                                    <button class="modal-btn" @click="$emit('close')">OK</button>
-                                </div>
-                            </div>
+                            <button class="btn btn-error btn-block btn-ghost" @click="$emit('close')">close</button>
                         </div>
                     </div>
                     </div>
@@ -72,15 +67,16 @@
             </script>
 
             <script type="text/x-template" id="album-template">
-                <div class="grid album-line">
-                    <div class="cell -6of12">
+                <div class="grid -middle album-line">
+                    <div class="cell -10of12">
                         <div class="album-title">{{ album }}</div>
                     </div>
-                    <div class="cell -1of12 m3u8-cell">
-                        <div class="album-url" v-on:click="generateLink">m3u8</div>
+                    <div class="cell -2of12">
+                        <button class="btn btn-primary btn-block btn-ghost" @click="generateLink">open</button>
                         <modal
                             v-if="showCopyModal"
                             v-on:close="showCopyModal = false"
+                            v-bind:title="album"
                             v-bind:m3u8Link="m3u8Link"
                             v-bind:mp3Source="mp3Source"
                         />

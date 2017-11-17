@@ -30,7 +30,8 @@ import (
 )
 
 var (
-	rootPath        = flag.String("rootpath", "./music", "Root path to serve from")
+	rootPath        = flag.String("rootpath", "music", "FLAC / MP3 catalog")
+	mp3Path         = flag.String("mp3path", "mp3", "mp3 miror of rootPath")
 	baseUrl         = flag.String("base-url", "http://localhost:3000", "Base URL that should appear in playlists")
 	addr            = flag.String("listen.addr", ":3000", "listening address")
 	serviceAccount  = flag.String("account", "gibolin-service-account.json", "Path to service account file")
@@ -290,7 +291,7 @@ func mp3ComposeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	files, err := ioutil.ReadDir(*rootPath + "/" + path)
+	files, err := ioutil.ReadDir(*mp3Path + "/" + path)
 	if err != nil {
 		glog.Errorf("error reading directory: %s", err)
 		http.Error(w, "error reading directory", http.StatusInternalServerError)
@@ -301,7 +302,7 @@ func mp3ComposeHandler(w http.ResponseWriter, r *http.Request) {
 	for _, f := range files {
 		name := f.Name()
 		if strings.HasSuffix(name, "mp3") {
-			parts = append(parts, Part(*rootPath+"/"+path+"/"+name))
+			parts = append(parts, Part(*mp3Path+"/"+path+"/"+name))
 		}
 	}
 	sra := NewMultiReaderAt(parts...)

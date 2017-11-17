@@ -6,29 +6,23 @@
 }
 .album-line .cell {
     padding: 10px;
-    border-bottom: 1px solid #ccc;
-}
-.album-line .title-cell {
-    border-right: 1px solid #ccc;
 }
 .album-line .cell .album-url{
     text-align: center;
     cursor: pointer;
 }
-.album-line .m3u8-cell{
-    margin: 2px;
-    border: 1px solid #00BFFF;
-}
-.album-line .m3u8-cell:hover{
-    background-color: #01A9DB;
-}
 .album-line .zip-cell{
     margin: 2px;
-    border: 1px solid #FF0040;
 }
 .album-line .zip-cell:hover{
     background-color: #DF013A;
 }
+
+audio {
+    width: 100%;
+    display: block;
+}
+
 /* modal shit */
 .modal-mask {
 	position: fixed;
@@ -79,6 +73,7 @@
     color: black;
     background-color: white;
 }
+
 /*
  * The following styles are auto-applied to elements with
  * transition="modal" when their visibility is toggled
