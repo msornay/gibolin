@@ -5,38 +5,14 @@ package main
 
 import (
 	"io"
-	"log"
-	"net/http"
 	"os"
 	"sort"
-	"time"
-
-	"github.com/gorilla/handlers"
 )
 
-func part(path string) SizeReaderAt {
+func Part(path string) SizeReaderAt {
 	f, _ := os.Open(path)
 	fi, _ := f.Stat()
 	return io.NewSectionReader(f, 0, fi.Size())
-}
-
-func handler(w http.ResponseWriter, r *http.Request) {
-	sra := NewMultiReaderAt(
-		part("./dexter.mp3"),
-		part("./dexter.mp3"),
-		part("./dexter.mp3"),
-		part("./dexter.mp3"),
-		part("./dexter.mp3"),
-		part("./dexter.mp3"),
-	)
-	rs := io.NewSectionReader(sra, 0, sra.Size())
-	http.ServeContent(w, r, "foo.txt", time.Now(), rs)
-}
-
-func main() {
-	log.Printf("Running...")
-	http.Handle("/", handlers.LoggingHandler(os.Stdout, http.HandlerFunc(handler)))
-	log.Fatal(http.ListenAndServe("127.0.0.1:8080", nil))
 }
 
 // A SizeReaderAt is a ReaderAt with a Size method.

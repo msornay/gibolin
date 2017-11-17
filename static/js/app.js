@@ -12,6 +12,7 @@ initApp = function() {
             var displayName = user.displayName;
             user.getIdToken().then(function(accessToken) {
                 document.getElementById('sign-in-status').textContent = 'Signed in as: '+user.email;
+
                 Vue.component('dir-item', {
                     template: '#dir-template',
                     props: ['title'],
@@ -41,7 +42,10 @@ initApp = function() {
                         return {
                             open: false,
                             m3u8Text: "m3u8",
+
                             m3u8Link: null,
+                            mp3Source: null,
+
                             showCopyModal: false,
                         }
                     },
@@ -54,26 +58,29 @@ initApp = function() {
                                 this.$http.get(apiAddr+'/token/'+this.serie+'/'+this.album).then(response => {
                                     token = JSON.parse(response.body).token;
                                     this.m3u8Link = apiAddr+"/m3u8/"+token;
+                                    this.mp3Source = apiAddr+"/mp3/"+token;
                                 }, response => {
                                     displayError("Cannot get token from server");
                                     console.log("Cannot get token from server");
                                 });
                             }
-                            this.showCopyModal = true
+                            this.showCopyModal = true;
                         },
                     },
                 })
+
                 Vue.component('modal', {
                     template: '#modal-template',
-                    props: ['link'],
+                    props: ['m3u8Link', 'mp3Source'],
                     methods: {
-                        // Copy link to clipboard
+                        // Copy m3u8Link to clipboard
                         copyLink: function() {
-                            this.$refs.link.select();
+                            this.$refs.m3u8Link.select();
                             document.execCommand('copy');
                         },
                     }
                 })
+
                 Vue.http.headers.common['Authorization'] = 'Bearer '+accessToken;
                 var rootListVue = new Vue({
                     el: '#root',

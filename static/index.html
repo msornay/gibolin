@@ -32,6 +32,7 @@
                     </div>
                 </div>
             </script>
+
             <script type="text/x-template" id="modal-template">
                 <transition name="modal">
                     <div class="modal-mask">
@@ -39,22 +40,25 @@
                     <div class="card modal-container">
                         <div class="card-header">M3U8 URL</div>
                         <div class="card-content">
+                            <audio controls v-bind:src="mp3Source">
+                            browser does not support audio
+                            </audio>
+
                             <div class="grid">
                                 <div class="cell -12of12">
-                                    <textarea class="modal-textarea" readonly rows="1" style="overflow:hidden" wrap="off" ref="link">{{link}}</textarea>
+                                    <textarea class="modal-textarea" readonly rows="1" style="overflow:hidden" wrap="off" ref="m3u8Link">{{m3u8Link}}</textarea>
                                 </div>
                             </div>
+
                             <div class="grid">
                                 <div class="cell -1of12">
                                     <i class="material-icons copy-icon" title="Copy link" v-on:click="copyLink">content_copy</i>
                                 </div>
                                 <div class="cell -1of12">
-                                    <a v-bind:href="link" title="Open playlist" class="headset-icon"><i class="material-icons">open_in_new</i></a>
-                                </div>
-                                <div class="cell -1of12">
-                                    <a href="#" title="Listen" class="headset-icon"><i class="material-icons">headset</i></a>
+                                    <a v-bind:href="m3u8Link" title="Open playlist" class="headset-icon"><i class="material-icons">open_in_new</i></a>
                                 </div>
                             </div>
+
                             <div class="grid">
                                 <div class="cell -12of12">
                                     <button class="modal-btn" @click="$emit('close')">OK</button>
@@ -66,6 +70,7 @@
                     </div>
                 </transition>
             </script>
+
             <script type="text/x-template" id="album-template">
                 <div class="grid album-line">
                     <div class="cell -6of12">
@@ -73,21 +78,27 @@
                     </div>
                     <div class="cell -1of12 m3u8-cell">
                         <div class="album-url" v-on:click="generateLink">m3u8</div>
-                        <modal v-if="showCopyModal" v-on:close="showCopyModal = false" v-bind:link="m3u8Link" />
+                        <modal
+                            v-if="showCopyModal"
+                            v-on:close="showCopyModal = false"
+                            v-bind:m3u8Link="m3u8Link"
+                            v-bind:mp3Source="mp3Source"
+                        />
                     </div>
                     <!--<div class="cell -1of12 zip-cell">
                         <div class="album-url">zip</div>
                     </div>-->
                 </div>
             </script>
+
             <div id="root" class="main container">
                 <h1>gibol.in</h1>
-                    <div id="error" style="display:none" class="alert alert-error"></div>
-                    <div is="dir-item"
-                        v-for="d in rootList"
-                        v-bind:title="d.name"
-                        v-if="d.dir">
-                    </div>
+                <div id="error" style="display:none" class="alert alert-error"></div>
+                <div is="dir-item"
+                    v-for="d in rootList"
+                    v-bind:title="d.name"
+                    v-if="d.dir">
+                </div>
                 <div id="sign-in-status" class="help-block"></div>
             </div>
     </body>

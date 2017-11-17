@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -275,40 +276,38 @@ func playlistHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// func zipHandler(w http.ResponseWriter, r *http.Request) {
-// 	vars := mux.Vars(r)
-// 	path, ok := vars["path"]
-// 	if !ok || path == "" {
-// 		http.Error(w, "invalid path", http.StatusBadRequest)
-// 		return
-// 	}
-//
-// 	dir := *rootPath + "/" + path
-// 	f, _ := os.Open(dir)
-// 	dirs, err := f.Readdir(-1)
-// 	f.Close()
-// 	if err != nil {
-// 		http.Error(w, "Error reading directory", http.StatusInternalServerError)
-// 		return
-// 	}
-//
-// 	w.Header().Set("Content-Type", "application/zip")
-// 	z := zip.NewWriter(w)
-// 	defer z.Close()
-// 	for _, d := range dirs {
-// 		zf, err := z.Create(d.Name())
-// 		if err != nil {
-// 			http.Error(w, "cannot create zip file", http.StatusInternalServerError)
-// 			return
-// 		}
-//
-// 		// XXX(msy) Use FlaC magic instead
-// 		if strings.HasSuffix(name, "flac") {
-// 			fmt.Fprintf(w, "%s?token=%s\n", name, token)
-// 		}
-// 	}
-//
-// }
+func mp3ComposeHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	token, ok := vars["token"]
+	if !ok || token == "" {
+		http.Error(w, "invalid token", http.StatusBadRequest)
+		return
+	}
+
+	path, err := streamTokens.GetPath(token)
+	if err != nil {
+		http.Error(w, "file not found", http.StatusNotFound)
+		return
+	}
+
+	files, err := ioutil.ReadDir(*rootPath + "/" + path)
+	if err != nil {
+		glog.Errorf("error reading directory: %s", err)
+		http.Error(w, "error reading directory", http.StatusInternalServerError)
+		return
+	}
+
+	var parts []SizeReaderAt
+	for _, f := range files {
+		name := f.Name()
+		if strings.HasSuffix(name, "mp3") {
+			parts = append(parts, Part(*rootPath+"/"+path+"/"+name))
+		}
+	}
+	sra := NewMultiReaderAt(parts...)
+	rs := io.NewSectionReader(sra, 0, sra.Size())
+	http.ServeContent(w, r, "mix.mp3", time.Now(), rs)
+}
 
 func main() {
 	flag.Parse()
@@ -340,6 +339,7 @@ func main() {
 	r.Handle("/token/{path:.*}", FirebaseAuthHandler(authClient, whitelist, http.HandlerFunc(issueTokenHandler)))
 
 	r.Handle("/m3u8/{token}", http.HandlerFunc(playlistHandler))
+	r.Handle("/mp3/{token}", http.HandlerFunc(mp3ComposeHandler))
 	// r.Handle("/zip/token", FirebaseAuthHandler(http.StripPrefix("/zip/", http.HandlerFunc(zipHandler))))
 
 	r.Handle("/audio/{path:.*}/{_}", TokenHandler(http.StripPrefix("/audio/", http.FileServer(http.Dir(*rootPath)))))
