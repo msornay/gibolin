@@ -31,7 +31,7 @@ import (
 
 var (
 	rootPath        = flag.String("rootpath", "music", "FLAC / MP3 catalog")
-	mp3Path         = flag.String("mp3path", "mp3", "mp3 miror of rootPath")
+	mp3Path         = flag.String("mp3path", "mp3", "mp3 mirror of rootPath")
 	baseUrl         = flag.String("base-url", "http://localhost:3000", "Base URL that should appear in playlists")
 	addr            = flag.String("listen.addr", ":3000", "listening address")
 	serviceAccount  = flag.String("account", "gibolin-service-account.json", "Path to service account file")

@@ -1,0 +1,18 @@
+version: '3'
+services:
+  api:
+    build: api/
+    image: gloubi/gibolin-api
+    volumes:
+        - ./gibolin-service-account.json:/etc/firebase-account.json
+    environment:
+        - GBL_ACCOUNT_FILE=/etc/firebase-account.json
+  mp3:
+    build: mp3/
+    volumes:
+        - ./data/music:/data/music
+        - ./data/mp3:/data/mp3
+    environment:
+        - MP3_ROOT=/data/music
+        - MP3_DEST=/data/mp3
+
