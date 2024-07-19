@@ -1,4 +1,4 @@
-FROM python:3.11.5-bullseye
+FROM python:3.12-bookworm
 
 WORKDIR /app
 
@@ -15,4 +15,4 @@ RUN pip install -r requirements.txt
 
 EXPOSE 8000
 
-CMD ["uvicorn", "mysaas.asgi:application", "--host", "0.0.0.0"]
+CMD ["./manage.py", "runserver", "0.0.0.0:8000"]
