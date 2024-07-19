@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: pgautoupgrade/pgautoupgrade:latest
+    restart: always
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      POSTGRES_PASSWORD: postgres
+
+  api:
+    build:
+      context: api
+      dockerfile: Dockerfile
+    image: api:latest
+    ports:
+      - '8001:8000'
+    volumes:
+      - ./api:/app
+    command: uvicorn gibolin.asgi:fastapp --host 0.0.0.0 --reload
+    depends_on:
+      - postgres
+
+  admin:
+    build:
+      context: api
+      dockerfile: Dockerfile
+    image: api:latest
+    ports:
+      - '8000:8000'
+    volumes:
+      - ./api:/app
+    command: uvicorn gibolin.asgi:application --host 0.0.0.0 --reload
+    depends_on:
+      - postgres
+
+  ui:
+    build:
+      context: ui
+    image: ui:latest
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./ui:/app
+    command: yarn dev
+    depends_on:
+      - api
+
+  nginx:
+    image: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - admin
+      - api
+      - ui
+
+volumes:
+  postgres-data:
