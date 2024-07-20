@@ -29,7 +29,7 @@ services:
       - '3000:3000'
     volumes:
       - ./ui:/app
-    command: yarn dev
+    command: npm run dev --host
     depends_on:
       - api
 
