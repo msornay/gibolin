@@ -23,7 +23,7 @@ api = ninja.NinjaAPI()
 
 @api.get("/healthcheck")
 def status(request):
-    return {"health": "ok"}
+    return {}
 
 
 class ReferenceIn(ninja.Schema):
