@@ -19,18 +19,12 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 
+from cave.api import api as cave_api
+
 import ninja
-
-
-api = ninja.NinjaAPI()
-
-
-@api.get("/status")
-def status(request):
-    return {"status": "ok"}
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', api.urls),
+    path('api/', cave_api.urls),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
