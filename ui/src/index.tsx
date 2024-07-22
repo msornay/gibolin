@@ -1,3 +1,7 @@
+"use client"
+
+import "./index.css"
+
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 
@@ -7,91 +11,139 @@ import {
 } from 'react-router-dom'
 
 import {
-    AppShell,
-    Burger,
-    MantineProvider,
-    Table,
-} from '@mantine/core';
+    ColumnDef,
+    flexRender,
+    getCoreRowModel,
+    useReactTable,
+} from "@tanstack/react-table"
 
-import '@mantine/core/styles.css'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 
-// XXX(msy) Themes https://github.com/mantinedev/vite-min-template
-// XXX(msy) Logo next to Burger
-
-import { useDisclosure } from '@mantine/hooks';
-
-function References() {
-    const elements = [
-        { position: 6, mass: 12.011, symbol: 'C', name: 'Carbon' },
-        { position: 7, mass: 14.007, symbol: 'N', name: 'Nitrogen' },
-        { position: 39, mass: 88.906, symbol: 'Y', name: 'Yttrium' },
-        { position: 56, mass: 137.33, symbol: 'Ba', name: 'Barium' },
-        { position: 58, mass: 140.12, symbol: 'Ce', name: 'Cerium' },
-    ];
-
-    const rows = elements.map((element) => (
-        <Table.Tr key={element.name}>
-        <Table.Td>{element.position}</Table.Td>
-        <Table.Td>{element.name}</Table.Td>
-        <Table.Td>{element.symbol}</Table.Td>
-        <Table.Td>{element.mass}</Table.Td>
-        </Table.Tr>
-    ));
-
-    return (
-        <Table>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Element position</Table.Th>
-              <Table.Th>Element name</Table.Th>
-              <Table.Th>Symbol</Table.Th>
-              <Table.Th>Atomic mass</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>{rows}</Table.Tbody>
-        </Table>
-    );
+interface DataTableProps<TData, TValue> {
+  columns: ColumnDef<TData, TValue>[]
+  data: TData[]
 }
 
-function GibolinShell() {
-    const [opened, { toggle }] = useDisclosure();
+export function DataTable<TData, TValue>({
+  columns,
+  data,
+}: DataTableProps<TData, TValue>) {
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  })
+
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => {
+                return (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </TableHead>
+                )
+              })}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {table.getRowModel().rows?.length ? (
+            table.getRowModel().rows.map((row) => (
+              <TableRow
+                key={row.id}
+                data-state={row.getIsSelected() && "selected"}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={columns.length} className="h-24 text-center">
+                No results.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  )
+}
+
+export type Reference = {
+    sqid: string
+    name: string
+    domain: string
+    vintage: int
+}
+
+export const columns: ColumnDef<Reference>[] = [
+    {
+        accessorKey: "name",
+        header: "Name",
+    },
+    {
+        accessorKey: "domain",
+        header: "Domain",
+    },
+    {
+        accessorKey: "vintage",
+        header: "Vintage",
+    },
+]
+
+function getData(): Reference[] {
+  // Fetch data from your API here.
+  return [
+    {
+      "sqid": "728ed52f",
+      "name": "React",
+      "domain": "JavaScript",
+      "vintage": 2013,
+    },
+  ]
+}
+
+export default function ReferenceTable() {
+    const data = getData()
+
     return (
-        <AppShell
-            header={{ height: 60 }}
-            navbar={{
-                width: 300,
-                breakpoint: 'sm',
-                collapsed: { mobile: !opened },
-            }}
-            padding="md"
-        >
-            <AppShell.Header>
-                <Burger
-                    opened={opened}
-                    onClick={toggle}
-                    hiddenFrom="sm"
-                    size="sm"
-                />
-            </AppShell.Header>
-            <AppShell.Navbar p="md">Navbar</AppShell.Navbar>
-            <AppShell.Main>
-                <References />
-            </AppShell.Main>
-        </AppShell>
-    );
+        <div className="container mx-auto py-10">
+            <DataTable columns={columns} data={data} />
+        </div>
+    )
 }
 
 const router = createBrowserRouter([
     {
         path: "/",
-        element: <GibolinShell />,
+        element: <ReferenceTable />,
     },
 ]);
 
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
+
     <React.StrictMode>
-        <MantineProvider>
-            <RouterProvider router={router} />
-        </MantineProvider>
+        <RouterProvider router={router} />
     </React.StrictMode>
 );
