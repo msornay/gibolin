@@ -1,5 +1,6 @@
 Django==5.0.3
 django-use-email-as-username==1.4.0
 django-ninja==1.2.2
+django-cors-headers==4.4.0
 psycopg2==2.9.9
 sqids==0.4.1

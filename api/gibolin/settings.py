@@ -35,6 +35,8 @@ INSTALLED_APPS = [
 
     "users.apps.UsersConfig",
 
+    "corsheaders",
+
     "django_use_email_as_username.apps.DjangoUseEmailAsUsernameConfig",
     'django.contrib.admin',
     'django.contrib.auth',
@@ -44,7 +46,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 ]
 
+# XXX(msy) better CORS config
+CORS_ALLOW_ALL_ORIGINS = True
+
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

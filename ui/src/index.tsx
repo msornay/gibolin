@@ -11,6 +11,12 @@ import {
 } from 'react-router-dom'
 
 import {
+    QueryClient,
+    QueryClientProvider,
+    useQuery,
+} from'@tanstack/react-query'
+
+import {
     ColumnDef,
     flexRender,
     getCoreRowModel,
@@ -25,6 +31,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+
+const queryClient = new QueryClient()
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -111,24 +119,33 @@ export const columns: ColumnDef<Reference>[] = [
     },
 ]
 
-function getData(): Reference[] {
-  // Fetch data from your API here.
-  return [
-    {
-      "sqid": "728ed52f",
-      "name": "React",
-      "domain": "JavaScript",
-      "vintage": 2013,
-    },
-  ]
-}
-
 export default function ReferenceTable() {
-    const data = getData()
+
+    const { isLoading, error, data } = useQuery({
+        queryKey: ['references'],
+        queryFn: () =>
+            fetch('http://localhost:8000/api/refs').then(
+                (res) => res.json()
+            ),
+    });
+
+    if (isLoading) {
+        /* XXX(msy) proper loading component */
+        return <div>Loading...</div>
+    }
+
+    if (error) {
+        /* XXX(msy) proper error component */
+        return <div>Error</div>
+    }
+
+    /* XXX(msy) handle empty items list */
+
+    console.log(data)
 
     return (
         <div className="container mx-auto py-10">
-            <DataTable columns={columns} data={data} />
+            <DataTable columns={columns} data={data["items"]} />
         </div>
     )
 }
@@ -142,8 +159,10 @@ const router = createBrowserRouter([
 
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-
+    /* XXX(msy) is this really the way to use query + router? */
     <React.StrictMode>
-        <RouterProvider router={router} />
+        <QueryClientProvider client={queryClient}>
+            <RouterProvider router={router} />
+        </QueryClientProvider>
     </React.StrictMode>
 );
