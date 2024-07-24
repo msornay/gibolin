@@ -24,77 +24,112 @@ import {
 } from "@tanstack/react-table"
 
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Button
+} from "@/components/ui/button"
+
+
+import {
+    Input
+} from "@/components/ui/input"
+
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@/components/ui/table"
 
 const queryClient = new QueryClient()
 
+interface DataTableToolbarProps<TData> {
+    table: Table<TData>
+}
+
+export function ReferenceForm<TData>({}) {}
+
+
+
+export function DataTableToolbar<TData>({
+    table,
+}: DataTableToolbarProps<TData>) {
+    return (
+        <div className="flex items-center justify-between">
+        <div className="flex flex-1 items-center space-x-2">
+          <Input placeholder="Filter references..." className="h-8 w-[150px] lg:w-[250px]" />
+        </div>
+          <Button asChild className="h-8">
+            <a href="new"> New </a>
+          </Button>
+        </div>
+    )
+}
+
 interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[]
-  data: TData[]
+    columns: ColumnDef<TData, TValue>[]
+    data: TData[]
 }
 
 export function DataTable<TData, TValue>({
-  columns,
-  data,
-}: DataTableProps<TData, TValue>) {
-  const table = useReactTable({
-    data,
     columns,
-    getCoreRowModel: getCoreRowModel(),
-  })
+    data,
+}: DataTableProps<TData, TValue>) {
+    const table = useReactTable({
+        data,
+        columns,
+        getCoreRowModel: getCoreRowModel(),
+    })
 
-  return (
-    <div className="rounded-md border">
-      <Table>
+    return (
+        <div className="space-y-4">
+        <DataTableToolbar table={table} />
+        <div className="rounded-md border">
+        <Table>
         <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
+        {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => {
+            {headerGroup.headers.map((header) => {
                 return (
-                  <TableHead key={header.id}>
+                    <TableHead key={header.id}>
                     {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
                         )}
-                  </TableHead>
+                        </TableHead>
                 )
-              })}
+            })}
             </TableRow>
-          ))}
+        ))}
         </TableHeader>
         <TableBody>
-          {table.getRowModel().rows?.length ? (
+        {table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
-              <TableRow
+                <TableRow
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
-              >
+                >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
+                    <TableCell key={cell.id}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
+                    </TableCell>
                 ))}
-              </TableRow>
+                </TableRow>
             ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center">
-                No results.
-              </TableCell>
-            </TableRow>
-          )}
+        ) : (
+        <TableRow>
+        <TableCell colSpan={columns.length} className="h-24 text-center">
+        No results.
+            </TableCell>
+        </TableRow>
+        )}
         </TableBody>
-      </Table>
-    </div>
-  )
+        </Table>
+        </div>
+        </div>
+    )
 }
 
 export type Reference = {
@@ -124,9 +159,9 @@ export default function ReferenceTable() {
     const { isLoading, error, data } = useQuery({
         queryKey: ['references'],
         queryFn: () =>
-            fetch('http://localhost:8000/api/refs').then(
-                (res) => res.json()
-            ),
+        fetch('http://localhost:8000/api/refs').then(
+            (res) => res.json()
+        ),
     });
 
     if (isLoading) {
@@ -145,15 +180,19 @@ export default function ReferenceTable() {
 
     return (
         <div className="container mx-auto py-10">
-            <DataTable columns={columns} data={data["items"]} />
+        <DataTable columns={columns} data={data["items"]} />
         </div>
     )
 }
 
 const router = createBrowserRouter([
     {
-        path: "/",
+        path: "/refs",
         element: <ReferenceTable />,
+    },
+    {
+        path: "/refs/new",
+        element: <ReferenceForm />,
     },
 ]);
 
@@ -161,8 +200,8 @@ const router = createBrowserRouter([
 ReactDOM.createRoot(document.getElementById('root')!).render(
     /* XXX(msy) is this really the way to use query + router? */
     <React.StrictMode>
-        <QueryClientProvider client={queryClient}>
-            <RouterProvider router={router} />
-        </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+    <RouterProvider router={router} />
+    </QueryClientProvider>
     </React.StrictMode>
 );
