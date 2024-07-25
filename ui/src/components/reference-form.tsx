@@ -2,7 +2,10 @@
 
 import { useForm } from "react-hook-form"
 
-import { useParams } from 'react-router-dom';
+import {
+    useParams,
+    useNavigate,
+} from 'react-router-dom';
 
 import {
     QueryClient,
@@ -41,10 +44,11 @@ function ReferenceForm({ reference, onSubmit }) {
     })
 
     /*
-    const onSubmit = (data: z.infer<typeof formSchema>) => {
-        console.log(data)
-    }
-    */
+     * XXX(msy) how to benefit from zod validation with react query mutate?
+     * const onSubmit = (data: z.infer<typeof formSchema>) => {
+     *     console.log(data)
+     * }
+     */
 
     return (
         <Form {...form}>
@@ -96,6 +100,7 @@ function ReferenceForm({ reference, onSubmit }) {
 
 export function ReferenceDetails() {
     let { sqid } = useParams()
+    const navigate = useNavigate()
 
     if (sqid !== undefined) {
         const { data } = useQuery({
@@ -107,16 +112,44 @@ export function ReferenceDetails() {
             /* the form isn't updated if server state changes anyway */
             staleTime: Infinity,
         })
-        const { register, handleSubmit } = useForm()
+
+        /* XXX(msy) const { register, handleSubmit } = useForm() */
         const { mutate } = useMutation({
-            mutationFn: (values) => updatReference(values),
+            mutationFn: (values) =>
+                fetch(
+                    `http://localhost:8000/api/ref/${sqid}`,
+                    {
+                        method: "PUT",
+                        body: JSON.stringify(values),
+                    }
+                )
         })
-
-
-        if (data) {
-            return <ReferenceForm reference={data} onSubmit={mutate} />
-        } else {
-            console.log("no data")
-        }
+        if (data) return <ReferenceForm reference={data} onSubmit={mutate} />
+        return "loading"
     }
+    const { mutate } = useMutation({
+        mutationFn: (values) =>
+            fetch(
+                `http://localhost:8000/api/ref`,
+                {
+                    method: "POST",
+                    body: JSON.stringify(values),
+                }
+            ),
+        onSuccess: (data) => {
+            navigate(`/refs`)
+        },
+    })
+    return (
+        <ReferenceForm
+            reference={
+                {
+                    name: "",
+                    domain: "",
+                    vintage: 2023,
+                }
+            }
+            onSubmit={mutate}
+        />
+    )
 }

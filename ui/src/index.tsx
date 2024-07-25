@@ -61,7 +61,7 @@ export function DataTableToolbar<TData>({
           <Input placeholder="Filter references..." className="h-8 w-[150px] lg:w-[250px]" />
         </div>
           <Button asChild className="h-8">
-            <a href="new"> New </a>
+            <a href="/ref/new"> New </a>
           </Button>
         </div>
     )
@@ -152,6 +152,14 @@ export const columns: ColumnDef<Reference>[] = [
     {
         accessorKey: "vintage",
         header: "Vintage",
+    },
+    {
+        id: "edit",
+        cell: ({ row }) => {
+          const reference = row.original
+
+          return <a href={`/ref/${reference.sqid}`}>Edit</a>
+        },
     },
 ]
 
