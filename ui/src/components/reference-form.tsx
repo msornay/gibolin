@@ -97,8 +97,6 @@ function ReferenceForm({ reference, onSubmit }) {
 export function ReferenceDetails() {
     let { sqid } = useParams()
 
-    console.log(sqid)
-
     if (sqid !== undefined) {
         const { data } = useQuery({
             queryKey: ['reference', sqid],
@@ -106,7 +104,8 @@ export function ReferenceDetails() {
                 fetch(`http://localhost:8000/api/ref/${sqid}`).then(
                     (res) => res.json()
                 ),
-
+            /* the form isn't updated if server state changes anyway */
+            staleTime: Infinity,
         })
         const { register, handleSubmit } = useForm()
         const { mutate } = useMutation({
