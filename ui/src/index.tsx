@@ -41,14 +41,15 @@ import {
     TableRow,
 } from "@/components/ui/table"
 
+import {
+    ReferenceForm
+} from "@/components/reference-form"
+
 const queryClient = new QueryClient()
 
 interface DataTableToolbarProps<TData> {
     table: Table<TData>
 }
-
-export function ReferenceForm<TData>({}) {}
-
 
 
 export function DataTableToolbar<TData>({
