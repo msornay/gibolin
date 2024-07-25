@@ -2,6 +2,15 @@
 
 import { useForm } from "react-hook-form"
 
+import { useParams } from 'react-router-dom';
+
+import {
+    QueryClient,
+    QueryClientProvider,
+    useMutation,
+    useQuery,
+} from'@tanstack/react-query'
+
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 
@@ -15,6 +24,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
+
 import { Input } from "@/components/ui/input"
 
 
@@ -24,19 +34,17 @@ const formSchema = z.object({
     vintage: z.coerce.number().positive(),
 })
 
-export function ReferenceForm() {
+function ReferenceForm({ reference, onSubmit }) {
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
-            defaultValues: {
-                name: "",
-                domain: "",
-                vintage: 2023,
-            },
+            defaultValues: reference,
     })
 
+    /*
     const onSubmit = (data: z.infer<typeof formSchema>) => {
         console.log(data)
     }
+    */
 
     return (
         <Form {...form}>
@@ -84,4 +92,32 @@ export function ReferenceForm() {
             </form>
         </Form>
     )
+}
+
+export function ReferenceDetails() {
+    let { sqid } = useParams()
+
+    console.log(sqid)
+
+    if (sqid !== undefined) {
+        const { data } = useQuery({
+            queryKey: ['reference', sqid],
+            queryFn: () =>
+                fetch(`http://localhost:8000/api/ref/${sqid}`).then(
+                    (res) => res.json()
+                ),
+
+        })
+        const { register, handleSubmit } = useForm()
+        const { mutate } = useMutation({
+            mutationFn: (values) => updatReference(values),
+        })
+
+
+        if (data) {
+            return <ReferenceForm reference={data} onSubmit={mutate} />
+        } else {
+            console.log("no data")
+        }
+    }
 }

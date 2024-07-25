@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/table"
 
 import {
-    ReferenceForm
+    ReferenceDetails
 } from "@/components/reference-form"
 
 const queryClient = new QueryClient()
@@ -192,8 +192,12 @@ const router = createBrowserRouter([
         element: <ReferenceTable />,
     },
     {
-        path: "/refs/new",
-        element: <ReferenceForm />,
+        path: "/ref/new",
+        element: <ReferenceDetails />,
+    },
+    {
+        path: "/ref/:sqid",
+        element: <ReferenceDetails />,
     },
 ]);
 

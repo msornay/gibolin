@@ -1,5 +1,6 @@
 from typing import List, Optional
 
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 
 import ninja
@@ -15,7 +16,10 @@ def sqid_encode(id: int):
     return sqids.encode([id])
 
 def sqid_decode(sqid: str):
-    return sqids.decode(sqid)[0]
+    try:
+        return sqids.decode(sqid)[0]
+    except IndexError as exc:
+        raise Http404 from exc
 
 
 api = ninja.NinjaAPI()
