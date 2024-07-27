@@ -1,5 +1,6 @@
 from typing import List, Optional
 
+from django.contrib.postgres.search import SearchVector
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 
@@ -85,5 +86,11 @@ def get_reference(request, sqid: str):
 
 @api.get("/refs", response=List[ReferenceOut])
 @ninja_paginate
-def list_reference(request):
-    return Reference.objects.all()
+def list_reference(request, search: str = None):
+    if not search:
+        return Reference.objects.all()
+
+    # keyword matching, but no phrase matching. doing both is not trivial.
+    return Reference.objects.annotate(
+        search=SearchVector("name", "domain")
+    ).filter(search__icontains=search)
