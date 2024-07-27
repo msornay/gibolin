@@ -26,9 +26,8 @@
     /* shadcn */
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-       ]
-     },
-  "include": ["src"]
-}}
+      "@/*": ["./src/*"]
+    },
+    "include": ["src"]
+  }
+}
