@@ -60,6 +60,7 @@ describe('ReferenceDetails', () => {
     const mockReference = {
       sqid: 'test123',
       name: 'Test Wine',
+      category: 'Red',
       domain: 'test.com',
       vintage: 2020,
       purchases: [],
