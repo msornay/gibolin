@@ -102,29 +102,25 @@ export function ReferenceDetails() {
   let { sqid } = useParams();
   const navigate = useNavigate();
 
-  if (sqid !== undefined) {
-    const { data } = useQuery({
-      queryKey: ["reference", sqid],
-      queryFn: () =>
-        fetch(`http://localhost:8000/api/ref/${sqid}`).then((res) =>
-          res.json(),
-        ),
-      /* the form isn't updated if server state changes anyway */
-      staleTime: Infinity,
-    });
+  const { data } = useQuery({
+    queryKey: ["reference", sqid],
+    queryFn: () =>
+      fetch(`http://localhost:8000/api/ref/${sqid}`).then((res) =>
+        res.json(),
+      ),
+    enabled: sqid !== undefined,
+    staleTime: Infinity,
+  });
 
-    /* XXX(msy) const { register, handleSubmit } = useForm() */
-    const { mutate } = useMutation({
-      mutationFn: (values) =>
-        fetch(`http://localhost:8000/api/ref/${sqid}`, {
-          method: "PUT",
-          body: JSON.stringify(values),
-        }),
-    });
-    if (data) return <ReferenceForm reference={data} onSubmit={mutate} />;
-    return "loading";
-  }
-  const { mutate } = useMutation({
+  const { mutate: updateMutate } = useMutation({
+    mutationFn: (values) =>
+      fetch(`http://localhost:8000/api/ref/${sqid}`, {
+        method: "PUT",
+        body: JSON.stringify(values),
+      }),
+  });
+
+  const { mutate: createMutate } = useMutation({
     mutationFn: (values) =>
       fetch(`http://localhost:8000/api/ref`, {
         method: "POST",
@@ -134,6 +130,14 @@ export function ReferenceDetails() {
       navigate(`/refs`);
     },
   });
+
+  if (sqid !== undefined) {
+    if (data) {
+      return <ReferenceForm reference={data} onSubmit={updateMutate} />;
+    }
+    return <div>Loading...</div>;
+  }
+
   return (
     <ReferenceForm
       reference={{
@@ -141,7 +145,7 @@ export function ReferenceDetails() {
         domain: "",
         vintage: 2023,
       }}
-      onSubmit={mutate}
+      onSubmit={createMutate}
     />
   );
 }

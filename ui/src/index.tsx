@@ -12,6 +12,7 @@ import { ColumnDef } from "@tanstack/react-table";
 
 import { DataTable } from "@/components/data-table";
 import { ReferenceDetails } from "@/components/reference-form";
+import { Input } from "@/components/ui/input";
 
 // Types
 export type Reference = {
@@ -39,6 +40,7 @@ const fetchReferences = async (
   return await response.json();
 };
 
+// Define columns outside component to prevent recreation
 const columns: ColumnDef<Reference>[] = [
   {
     accessorKey: "name",
@@ -64,41 +66,52 @@ const columns: ColumnDef<Reference>[] = [
 
 function ReferenceTable() {
   const [search, setSearch] = React.useState<string>("");
+  const [debouncedSearch, setDebouncedSearch] = React.useState<string>("");
+
+  const handleSearchChange = React.useCallback((value: string) => {
+    setSearch(value);
+  }, []);
+
+  // Debounce search to prevent excessive API calls
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const { isLoading, error, data } = useQuery({
-    queryKey: ["references", search],
-    queryFn: () => fetchReferences(0, search),
+    queryKey: ["references", debouncedSearch],
+    queryFn: () => fetchReferences(0, debouncedSearch),
   });
-
-  if (isLoading) {
-    return (
-      <div className="container mx-auto py-10">
-        <div className="flex items-center justify-center h-32">
-          <div className="text-lg">Loading...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container mx-auto py-10">
-        <div className="flex items-center justify-center h-32">
-          <div className="text-lg text-red-600">Error loading references</div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="container mx-auto py-10">
       <h1 className="text-2xl font-bold mb-6">References</h1>
-      <DataTable
-        columns={columns}
-        data={data?.items || []}
-        textSearch={search}
-        setTextSearch={setSearch}
-      />
+      <div className="space-y-4">
+        <div className="flex items-center space-x-2">
+          <Input
+            placeholder="Filter references..."
+            className="h-8 w-[150px] lg:w-[250px]"
+            value={search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+          />
+        </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center h-32">
+            <div className="text-lg">Loading...</div>
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center h-32">
+            <div className="text-lg text-red-600">Error loading references</div>
+          </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={data?.items || []}
+          />
+        )}
+      </div>
     </div>
   );
 }

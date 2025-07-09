@@ -1,3 +1,4 @@
+import React from "react";
 import {
   ColumnDef,
   flexRender,
@@ -6,7 +7,6 @@ import {
 } from "@tanstack/react-table";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -19,15 +19,11 @@ import {
 type DataTableProps<TData, TValue> = {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
-  textSearch: string;
-  setTextSearch: (value: string) => void;
 };
 
-export function DataTable<TData, TValue>({
+function DataTableComponent<TData, TValue>({
   columns,
   data,
-  textSearch,
-  setTextSearch,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
@@ -37,15 +33,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-1 items-center space-x-2">
-          <Input
-            placeholder="Filter references..."
-            className="h-8 w-[150px] lg:w-[250px]"
-            value={textSearch}
-            onChange={(e) => setTextSearch(e.target.value)}
-          />
-        </div>
+      <div className="flex items-center justify-end">
         <Button asChild className="h-8">
           <a href="/ref/new"> New </a>
         </Button>
@@ -103,3 +91,5 @@ export function DataTable<TData, TValue>({
     </div>
   );
 }
+
+export const DataTable = React.memo(DataTableComponent) as typeof DataTableComponent;
