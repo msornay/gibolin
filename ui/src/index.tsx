@@ -8,7 +8,7 @@ import {
   QueryClientProvider,
   useQuery,
 } from "@tanstack/react-query";
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef, SortingFn } from "@tanstack/react-table";
 
 import { DataTable } from "@/components/data-table";
 import { ReferenceDetails } from "@/components/reference-form";
@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -51,17 +52,34 @@ const createColumns = (onEdit: (reference: Reference) => void): ColumnDef<Refere
   {
     accessorKey: "name",
     header: "Name",
+    enableSorting: true,
+    sortingFn: (rowA, rowB) => {
+      const a = rowA.getValue("name") as string;
+      const b = rowB.getValue("name") as string;
+      return a.toLowerCase().localeCompare(b.toLowerCase());
+    },
   },
   {
     accessorKey: "domain",
     header: "Domain",
+    enableSorting: true,
+    sortingFn: (rowA, rowB) => {
+      const a = rowA.getValue("domain") as string;
+      const b = rowB.getValue("domain") as string;
+      if (!a && !b) return 0;
+      if (!a) return 1;
+      if (!b) return -1;
+      return a.toLowerCase().localeCompare(b.toLowerCase());
+    },
   },
   {
     accessorKey: "vintage",
     header: "Vintage",
+    enableSorting: true,
   },
   {
     id: "edit",
+    enableSorting: false,
     cell: ({ row }) => {
       const reference = row.original;
 
@@ -152,6 +170,9 @@ function ReferenceTable() {
             <DialogTitle>
               {selectedReference ? "Edit Reference" : "New Reference"}
             </DialogTitle>
+            <DialogDescription>
+              {selectedReference ? "Update the reference details below." : "Add a new reference to your collection."}
+            </DialogDescription>
           </DialogHeader>
           <ReferenceDetails
             reference={selectedReference}
