@@ -1,5 +1,4 @@
 import "./index.css";
-
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
@@ -8,20 +7,22 @@ import {
   QueryClientProvider,
   useQuery,
 } from "@tanstack/react-query";
-import { ColumnDef } from "@tanstack/react-table";
+import { 
+  Table, 
+  Input, 
+  Button, 
+  Modal, 
+  Space,
+  Typography,
+  App as AntApp
+} from "antd";
+import { EditOutlined, PlusOutlined } from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
 
-import { DataTable } from "@/components/data-table";
 import { ReferenceDetails } from "@/components/reference-form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Edit } from "lucide-react";
+
+const { Title } = Typography;
+const { Search } = Input;
 
 // Types
 export type Purchase = {
@@ -34,8 +35,9 @@ export type Purchase = {
 export type Reference = {
   sqid: string;
   name: string;
-  domain: string;
-  vintage: number;
+  category?: string;
+  domain?: string;
+  vintage?: number;
   purchases: Purchase[];
 };
 
@@ -57,54 +59,6 @@ const fetchReferences = async (
   return await response.json();
 };
 
-// Define columns as a function to access the edit handler
-const createColumns = (onEdit: (reference: Reference) => void): ColumnDef<Reference>[] => [
-  {
-    accessorKey: "name",
-    header: "Name",
-    enableSorting: true,
-    sortingFn: (rowA, rowB) => {
-      const a = rowA.getValue("name") as string;
-      const b = rowB.getValue("name") as string;
-      return a.toLowerCase().localeCompare(b.toLowerCase());
-    },
-  },
-  {
-    accessorKey: "domain",
-    header: "Domain",
-    enableSorting: true,
-    sortingFn: (rowA, rowB) => {
-      const a = rowA.getValue("domain") as string;
-      const b = rowB.getValue("domain") as string;
-      if (!a && !b) return 0;
-      if (!a) return 1;
-      if (!b) return -1;
-      return a.toLowerCase().localeCompare(b.toLowerCase());
-    },
-  },
-  {
-    accessorKey: "vintage",
-    header: "Vintage",
-    enableSorting: true,
-  },
-  {
-    id: "edit",
-    enableSorting: false,
-    cell: ({ row }) => {
-      const reference = row.original;
-
-      return (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onEdit(reference)}
-        >
-          <Edit className="h-4 w-4" />
-        </Button>
-      );
-    },
-  },
-];
 
 function ReferenceTable() {
   const [search, setSearch] = React.useState<string>("");
@@ -144,53 +98,106 @@ function ReferenceTable() {
     queryFn: () => fetchReferences(0, debouncedSearch),
   });
 
-  const columns = React.useMemo(() => createColumns(handleEditReference), [handleEditReference]);
+  const columns: ColumnsType<Reference> = [
+    {
+      title: "Name",
+      dataIndex: "name",
+      key: "name",
+      sorter: (a, b) => (a.name || "").toLowerCase().localeCompare((b.name || "").toLowerCase()),
+    },
+    {
+      title: "Category",
+      dataIndex: "category",
+      key: "category",
+      sorter: (a, b) => {
+        const aVal = a.category || "";
+        const bVal = b.category || "";
+        return aVal.toLowerCase().localeCompare(bVal.toLowerCase());
+      },
+      render: (category) => category || "-",
+    },
+    {
+      title: "Domain",
+      dataIndex: "domain",
+      key: "domain",
+      sorter: (a, b) => {
+        const aVal = a.domain || "";
+        const bVal = b.domain || "";
+        return aVal.toLowerCase().localeCompare(bVal.toLowerCase());
+      },
+      render: (domain) => domain || "-",
+    },
+    {
+      title: "Vintage",
+      dataIndex: "vintage",
+      key: "vintage",
+      sorter: (a, b) => (a.vintage || 0) - (b.vintage || 0),
+      render: (vintage) => vintage || "-",
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      render: (_, record) => (
+        <Button
+          type="text"
+          icon={<EditOutlined />}
+          onClick={() => handleEditReference(record)}
+        />
+      ),
+    },
+  ];
+
+  if (error) {
+    return (
+      <div style={{ padding: "20px", textAlign: "center" }}>
+        <Title level={4} type="danger">Error loading references</Title>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-2xl font-bold mb-6">References</h1>
-      <div className="space-y-4">
-        <div className="flex items-center space-x-2">
-          <Input
-            placeholder="Filter references..."
-            className="h-8 w-[150px] lg:w-[250px]"
-            value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
-          />
-        </div>
-        {isLoading ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="text-lg">Loading...</div>
-          </div>
-        ) : error ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="text-lg text-red-600">Error loading references</div>
-          </div>
-        ) : (
-          <DataTable
-            columns={columns}
-            data={data?.items || []}
-            onNew={handleNewReference}
-          />
-        )}
-      </div>
+    <div style={{ padding: "20px" }}>
+      <Title level={2}>References</Title>
+      
+      <Space style={{ marginBottom: "16px" }}>
+        <Search
+          placeholder="Filter references..."
+          allowClear
+          value={search}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          style={{ width: 250 }}
+        />
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleNewReference}
+        >
+          New
+        </Button>
+      </Space>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedReference ? "Edit Reference" : "New Reference"}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedReference ? "Update the reference details below." : "Add a new reference to your collection."}
-            </DialogDescription>
-          </DialogHeader>
-          <ReferenceDetails
-            reference={selectedReference}
-            onClose={handleCloseModal}
-          />
-        </DialogContent>
-      </Dialog>
+      <Table
+        columns={columns}
+        dataSource={data?.items || []}
+        loading={isLoading}
+        rowKey="sqid"
+        pagination={false}
+        size="small"
+      />
+
+      <Modal
+        title={selectedReference ? "Edit Reference" : "New Reference"}
+        open={isModalOpen}
+        onCancel={handleCloseModal}
+        footer={null}
+        width={800}
+        destroyOnHidden
+      >
+        <ReferenceDetails
+          reference={selectedReference}
+          onClose={handleCloseModal}
+        />
+      </Modal>
     </div>
   );
 }
@@ -215,7 +222,9 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <AntApp>
+        <RouterProvider router={router} />
+      </AntApp>
     </QueryClientProvider>
   </React.StrictMode>,
 );

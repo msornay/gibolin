@@ -31,6 +31,17 @@ describe('Category Creation', () => {
         ok: true,
         json: () => Promise.resolve(['Bordeaux', 'Burgundy']),
       })
+      // Mock category creation
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ success: true }),
+      })
+      // Mock categories refetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(['Bordeaux', 'Burgundy', 'Champagne']),
+      })
+      // Mock reference creation
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ sqid: 'new123' }),
@@ -46,12 +57,18 @@ describe('Category Creation', () => {
       expect(global.fetch).toHaveBeenCalledWith('http://localhost:8000/api/categories');
     });
 
-    // Click the "+" button to add a new category
-    const addCategoryButton = screen.getByText('+');
-    fireEvent.click(addCategoryButton);
+    // Click the category select to open the dropdown
+    const categorySelect = screen.getByRole('combobox');
+    fireEvent.mouseDown(categorySelect);
+    
+    // Wait for dropdown to open and click the "Add new category" button
+    await waitFor(() => {
+      const addCategoryButton = screen.getByText('Add new category');
+      fireEvent.click(addCategoryButton);
+    });
 
     // Should show input field for new category
-    const newCategoryInput = screen.getByPlaceholderText('New category');
+    const newCategoryInput = screen.getByPlaceholderText('Category name');
     expect(newCategoryInput).toBeInTheDocument();
 
     // Type new category name
@@ -63,7 +80,7 @@ describe('Category Creation', () => {
 
     // Should hide the input and show the category in the select
     await waitFor(() => {
-      expect(screen.queryByPlaceholderText('New category')).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('Category name')).not.toBeInTheDocument();
     });
 
     // Fill in the rest of the form
@@ -76,7 +93,7 @@ describe('Category Creation', () => {
     fireEvent.change(vintageInput, { target: { value: '2020' } });
 
     // Submit form
-    const submitButton = screen.getByText('Submit');
+    const submitButton = screen.getByText('Create Reference');
     fireEvent.click(submitButton);
 
     // Verify the form was submitted with the new category
@@ -115,12 +132,18 @@ describe('Category Creation', () => {
       expect(global.fetch).toHaveBeenCalledWith('http://localhost:8000/api/categories');
     });
 
-    // Click the "+" button to add a new category
-    const addCategoryButton = screen.getByText('+');
-    fireEvent.click(addCategoryButton);
+    // Click the category select to open the dropdown
+    const categorySelect = screen.getByRole('combobox');
+    fireEvent.mouseDown(categorySelect);
+    
+    // Wait for dropdown to open and click the "Add new category" button
+    await waitFor(() => {
+      const addCategoryButton = screen.getByText('Add new category');
+      fireEvent.click(addCategoryButton);
+    });
 
     // Should show input field for new category
-    const newCategoryInput = screen.getByPlaceholderText('New category');
+    const newCategoryInput = screen.getByPlaceholderText('Category name');
     expect(newCategoryInput).toBeInTheDocument();
 
     // Type something
@@ -132,7 +155,7 @@ describe('Category Creation', () => {
 
     // Should hide the input and go back to select
     await waitFor(() => {
-      expect(screen.queryByPlaceholderText('New category')).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('Category name')).not.toBeInTheDocument();
     });
     
     // Should show the select again

@@ -1,14 +1,15 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { DataTable } from '../components/data-table';
+import { Table } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import { Reference } from '../index';
 
 const mockReferences: Reference[] = [
-  { sqid: '1', name: 'apple Wine', domain: 'Apple.com', vintage: 2020, purchases: [] },
-  { sqid: '2', name: 'Banana Wine', domain: 'banana.com', vintage: 2021, purchases: [] },
-  { sqid: '3', name: 'Cherry Wine', domain: 'CHERRY.com', vintage: 2019, purchases: [] },
+  { sqid: '1', name: 'apple Wine', category: 'Red', domain: 'Apple.com', vintage: 2020, purchases: [] },
+  { sqid: '2', name: 'Banana Wine', category: 'White', domain: 'banana.com', vintage: 2021, purchases: [] },
+  { sqid: '3', name: 'Cherry Wine', category: 'Rose', domain: 'CHERRY.com', vintage: 2019, purchases: [] },
 ];
 
 const createWrapper = () => {
@@ -25,34 +26,30 @@ const createWrapper = () => {
 };
 
 describe('Table Sorting', () => {
-  const mockColumns = [
+  const mockColumns: ColumnsType<Reference> = [
     {
-      accessorKey: 'name',
-      header: 'Name',
-      enableSorting: true,
-      sortingFn: (rowA: any, rowB: any) => {
-        const a = rowA.getValue('name') as string;
-        const b = rowB.getValue('name') as string;
-        return a.toLowerCase().localeCompare(b.toLowerCase());
-      },
+      title: 'Name',
+      dataIndex: 'name',
+      key: 'name',
+      sorter: (a, b) => (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase()),
     },
     {
-      accessorKey: 'domain',
-      header: 'Domain',
-      enableSorting: true,
-      sortingFn: (rowA: any, rowB: any) => {
-        const a = rowA.getValue('domain') as string;
-        const b = rowB.getValue('domain') as string;
-        if (!a && !b) return 0;
-        if (!a) return 1;
-        if (!b) return -1;
-        return a.toLowerCase().localeCompare(b.toLowerCase());
+      title: 'Domain',
+      dataIndex: 'domain',
+      key: 'domain',
+      sorter: (a, b) => {
+        const aVal = a.domain || '';
+        const bVal = b.domain || '';
+        return aVal.toLowerCase().localeCompare(bVal.toLowerCase());
       },
+      render: (domain) => domain || '-',
     },
     {
-      accessorKey: 'vintage',
-      header: 'Vintage',
-      enableSorting: true,
+      title: 'Vintage',
+      dataIndex: 'vintage',
+      key: 'vintage',
+      sorter: (a, b) => (a.vintage || 0) - (b.vintage || 0),
+      render: (vintage) => vintage || '-',
     },
   ];
 
@@ -60,10 +57,11 @@ describe('Table Sorting', () => {
     const wrapper = createWrapper();
     
     render(
-      <DataTable
+      <Table
         columns={mockColumns}
-        data={mockReferences}
-        onNew={() => {}}
+        dataSource={mockReferences}
+        rowKey="sqid"
+        pagination={false}
       />,
       { wrapper }
     );
@@ -85,10 +83,11 @@ describe('Table Sorting', () => {
     const wrapper = createWrapper();
     
     render(
-      <DataTable
+      <Table
         columns={mockColumns}
-        data={mockReferences}
-        onNew={() => {}}
+        dataSource={mockReferences}
+        rowKey="sqid"
+        pagination={false}
       />,
       { wrapper }
     );
@@ -110,10 +109,11 @@ describe('Table Sorting', () => {
     const wrapper = createWrapper();
     
     render(
-      <DataTable
+      <Table
         columns={mockColumns}
-        data={mockReferences}
-        onNew={() => {}}
+        dataSource={mockReferences}
+        rowKey="sqid"
+        pagination={false}
       />,
       { wrapper }
     );

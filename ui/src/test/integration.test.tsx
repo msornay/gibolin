@@ -3,7 +3,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
-import { DataTable } from '../components/data-table';
+import { Table } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import { ReferenceDetails } from '../components/reference-form';
 
 // Mock data
@@ -12,14 +13,15 @@ const mockReferences = [
   { sqid: '2', name: 'Wine 2', domain: 'test2.com', vintage: 2021 },
 ];
 
-const mockColumns = [
-  { accessorKey: 'name', header: 'Name' },
-  { accessorKey: 'domain', header: 'Domain' },
-  { accessorKey: 'vintage', header: 'Vintage' },
+const mockColumns: ColumnsType<any> = [
+  { title: 'Name', dataIndex: 'name', key: 'name' },
+  { title: 'Domain', dataIndex: 'domain', key: 'domain' },
+  { title: 'Vintage', dataIndex: 'vintage', key: 'vintage' },
   {
-    id: 'edit',
-    cell: ({ row }: any) => (
-      <button onClick={() => console.log('Edit', row.original)}>Edit</button>
+    title: 'Actions',
+    key: 'actions',
+    render: (_, record) => (
+      <button onClick={() => console.log('Edit', record)}>Edit</button>
     ),
   },
 ];
@@ -52,10 +54,12 @@ describe('Integration Tests', () => {
       
       return (
         <div>
-          <DataTable
+          <button onClick={() => setModalOpen(true)}>New</button>
+          <Table
             columns={mockColumns}
-            data={mockReferences}
-            onNew={() => setModalOpen(true)}
+            dataSource={mockReferences}
+            rowKey="sqid"
+            pagination={false}
           />
           {modalOpen && (
             <div data-testid="modal">
@@ -126,7 +130,7 @@ describe('Integration Tests', () => {
     fireEvent.change(vintageInput, { target: { value: '2020' } });
     
     // Submit form
-    const submitButton = screen.getByText('Submit');
+    const submitButton = screen.getByText('Create Reference');
     fireEvent.click(submitButton);
     
     // Verify API call
@@ -164,10 +168,11 @@ describe('Integration Tests', () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <DataTable
+          <Table
             columns={mockColumns}
-            data={filteredData}
-            onNew={() => {}}
+            dataSource={filteredData}
+            rowKey="sqid"
+            pagination={false}
           />
         </div>
       );

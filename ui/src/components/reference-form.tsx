@@ -1,209 +1,30 @@
 import React from "react";
-import { useForm } from "react-hook-form";
-
 import {
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-
-import { Button } from "@/components/ui/button";
 import {
   Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-
-import { Input } from "@/components/ui/input";
-import {
+  Input,
+  InputNumber,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { PurchaseHistory } from "./purchase-history";
+  Button,
+  Space,
+  Table,
+  DatePicker,
+  Typography,
+  message,
+  Divider,
+  Popconfirm,
+} from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
+import dayjs from "dayjs";
 
-const formSchema = z.object({
-  name: z.string(),
-  category: z.string().optional(),
-  domain: z.string().optional(),
-  vintage: z.coerce.number().positive(),
-});
+import { Reference, Purchase } from "../index";
 
-type ReferenceFormProps = {
-  reference: {
-    name: string;
-    category?: string;
-    domain?: string;
-    vintage: number;
-  };
-  onSubmit: (data: any) => void;
-};
-
-function ReferenceForm({ reference, onSubmit }: ReferenceFormProps) {
-  const [newCategory, setNewCategory] = React.useState('');
-  const [showNewCategoryInput, setShowNewCategoryInput] = React.useState(false);
-  const [localCategories, setLocalCategories] = React.useState<string[]>([]);
-  
-  const { data: categories } = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => 
-      fetch('http://localhost:8000/api/categories').then(res => res.json()),
-  });
-  
-  // Update local categories when API data changes
-  React.useEffect(() => {
-    if (categories) {
-      setLocalCategories(categories);
-    }
-  }, [categories]);
-  
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: reference,
-  });
-
-  /*
-   * XXX(msy) how to benefit from zod validation with react query mutate?
-   * const onSubmit = (data: z.infer<typeof formSchema>) => {
-   *     console.log(data)
-   * }
-   */
-
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Name</FormLabel>
-              <FormControl>
-                <Input placeholder="Name" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="category"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Category</FormLabel>
-              <div className="space-y-2">
-                {!showNewCategoryInput ? (
-                  <div className="flex space-x-2">
-                    <FormControl>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {localCategories.map((category: string) => (
-                            <SelectItem key={category} value={category}>
-                              {category}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowNewCategoryInput(true)}
-                    >
-                      +
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex space-x-2">
-                    <FormControl>
-                      <Input
-                        placeholder="New category"
-                        value={newCategory}
-                        onChange={(e) => setNewCategory(e.target.value)}
-                      />
-                    </FormControl>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (newCategory.trim()) {
-                          const trimmedCategory = newCategory.trim();
-                          // Add to local categories if not already present
-                          if (!localCategories.includes(trimmedCategory)) {
-                            setLocalCategories(prev => [...prev, trimmedCategory].sort());
-                          }
-                          field.onChange(trimmedCategory);
-                          setNewCategory('');
-                          setShowNewCategoryInput(false);
-                        }
-                      }}
-                    >
-                      Add
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setShowNewCategoryInput(false);
-                        setNewCategory('');
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                )}
-              </div>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="domain"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Domain</FormLabel>
-              <FormControl>
-                <Input placeholder="Domain" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="vintage"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Vintage</FormLabel>
-              <FormControl>
-                <Input placeholder="Vintage" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Button type="submit">Submit</Button>
-      </form>
-    </Form>
-  );
-}
-
-import { Reference } from "../index";
+const { Title } = Typography;
 
 type ReferenceDetailsProps = {
   reference: Reference | null;
@@ -211,68 +32,470 @@ type ReferenceDetailsProps = {
 };
 
 export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) {
+  const [form] = Form.useForm();
   const queryClient = useQueryClient();
-  
-  const { data } = useQuery({
+  const [messageApi, contextHolder] = message.useMessage();
+  const [showPurchaseForm, setShowPurchaseForm] = React.useState(false);
+  const [editingPurchase, setEditingPurchase] = React.useState<Purchase | null>(null);
+  const [purchaseForm] = Form.useForm();
+  const [newCategoryName, setNewCategoryName] = React.useState("");
+  const [isAddingCategory, setIsAddingCategory] = React.useState(false);
+
+  // Fetch categories
+  const { data: categories, refetch: refetchCategories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => 
+      fetch('http://localhost:8000/api/categories').then(res => res.json()),
+  });
+
+
+
+  // Fetch reference data for editing
+  const { data: referenceData } = useQuery({
     queryKey: ["reference", reference?.sqid],
     queryFn: () =>
       fetch(`http://localhost:8000/api/ref/${reference?.sqid}`).then((res) =>
         res.json(),
       ),
     enabled: reference !== null,
-    staleTime: Infinity,
   });
 
-  const { mutate: updateMutate } = useMutation({
-    mutationFn: (values) =>
+  // Update reference mutation
+  const updateMutation = useMutation({
+    mutationFn: (values: any) =>
       fetch(`http://localhost:8000/api/ref/${reference?.sqid}`, {
         method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["references"] });
       queryClient.invalidateQueries({ queryKey: ["categories"] });
+      queryClient.invalidateQueries({ queryKey: ["reference", reference?.sqid] });
+      refetchCategories(); // Force refetch categories
+      messageApi.success("Reference updated successfully");
       onClose();
+    },
+    onError: () => {
+      messageApi.error("Failed to update reference");
     },
   });
 
-  const { mutate: createMutate } = useMutation({
-    mutationFn: (values) =>
+  // Create category mutation
+  const createCategoryMutation = useMutation({
+    mutationFn: (categoryName: string) =>
+      fetch(`http://localhost:8000/api/categories`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: categoryName }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      messageApi.success("Category created successfully");
+    },
+    onError: () => {
+      messageApi.error("Failed to create category");
+    },
+  });
+
+  // Create reference mutation
+  const createMutation = useMutation({
+    mutationFn: (values: any) =>
       fetch(`http://localhost:8000/api/ref`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["references"] });
       queryClient.invalidateQueries({ queryKey: ["categories"] });
+      refetchCategories();
+      messageApi.success("Reference created successfully");
       onClose();
+    },
+    onError: () => {
+      messageApi.error("Failed to create reference");
     },
   });
 
-  if (reference !== null) {
-    if (data) {
-      return (
-        <div className="space-y-6">
-          <ReferenceForm reference={data} onSubmit={updateMutate} />
-          <PurchaseHistory 
-            referenceId={reference.sqid} 
-            purchases={data.purchases || []} 
-          />
-        </div>
-      );
+
+  // Purchase mutations
+  const createPurchaseMutation = useMutation({
+    mutationFn: (values: any) =>
+      fetch(`http://localhost:8000/api/ref/${reference?.sqid}/purchases`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...values,
+          date: values.date.format('YYYY-MM-DD'),
+        }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["references"] });
+      queryClient.invalidateQueries({ queryKey: ["reference", reference?.sqid] });
+      messageApi.success("Purchase added successfully");
+      setShowPurchaseForm(false);
+      purchaseForm.resetFields();
+    },
+    onError: () => {
+      messageApi.error("Failed to add purchase");
+    },
+  });
+
+  const updatePurchaseMutation = useMutation({
+    mutationFn: ({ id, values }: { id: number; values: any }) =>
+      fetch(`http://localhost:8000/api/purchase/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...values,
+          date: values.date.format('YYYY-MM-DD'),
+        }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["references"] });
+      queryClient.invalidateQueries({ queryKey: ["reference", reference?.sqid] });
+      messageApi.success("Purchase updated successfully");
+      setShowPurchaseForm(false);
+      setEditingPurchase(null);
+      purchaseForm.resetFields();
+    },
+    onError: () => {
+      messageApi.error("Failed to update purchase");
+    },
+  });
+
+  const deletePurchaseMutation = useMutation({
+    mutationFn: (id: number) =>
+      fetch(`http://localhost:8000/api/purchase/${id}`, {
+        method: "DELETE",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["references"] });
+      queryClient.invalidateQueries({ queryKey: ["reference", reference?.sqid] });
+      messageApi.success("Purchase deleted successfully");
+    },
+    onError: () => {
+      messageApi.error("Failed to delete purchase");
+    },
+  });
+
+  // Handle form submission
+  const handleSubmit = (values: any) => {
+    if (reference) {
+      updateMutation.mutate(values);
+    } else {
+      createMutation.mutate(values);
     }
-    return <div>Loading...</div>;
-  }
+  };
+
+  // Handle purchase form submission
+  const handlePurchaseSubmit = (values: any) => {
+    if (editingPurchase) {
+      updatePurchaseMutation.mutate({ id: editingPurchase.id, values });
+    } else {
+      createPurchaseMutation.mutate(values);
+    }
+  };
+
+  // Handle purchase edit
+  const handleEditPurchase = (purchase: Purchase) => {
+    setEditingPurchase(purchase);
+    setShowPurchaseForm(true);
+    purchaseForm.setFieldsValue({
+      date: dayjs(purchase.date),
+      quantity: purchase.quantity,
+      price: purchase.price,
+    });
+  };
+
+  // Handle purchase delete
+  const handleDeletePurchase = (id: number) => {
+    deletePurchaseMutation.mutate(id);
+  };
+
+  // Cancel purchase form
+  const handleCancelPurchase = () => {
+    setShowPurchaseForm(false);
+    setEditingPurchase(null);
+    purchaseForm.resetFields();
+  };
+
+  // Handle new category creation
+  const handleAddCategory = () => {
+    if (newCategoryName.trim()) {
+      const trimmedName = newCategoryName.trim();
+      
+      // Check if category already exists
+      if (categories?.includes(trimmedName)) {
+        messageApi.warning("Category already exists");
+        return;
+      }
+      
+      // Create category server-side
+      createCategoryMutation.mutate(trimmedName, {
+        onSuccess: () => {
+          form.setFieldsValue({ category: trimmedName });
+          setNewCategoryName("");
+          setIsAddingCategory(false);
+        }
+      });
+    }
+  };
+
+  const handleCancelAddCategory = () => {
+    setNewCategoryName("");
+    setIsAddingCategory(false);
+  };
+
+
+  // Set initial form values
+  React.useEffect(() => {
+    if (reference && referenceData) {
+      form.setFieldsValue({
+        name: referenceData.name,
+        category: referenceData.category,
+        domain: referenceData.domain,
+        vintage: referenceData.vintage,
+      });
+    } else {
+      form.setFieldsValue({
+        name: "",
+        category: undefined,
+        domain: "",
+        vintage: new Date().getFullYear(),
+      });
+    }
+  }, [reference, referenceData, form]);
+
+  // Purchase table columns
+  const purchaseColumns: ColumnsType<Purchase> = [
+    {
+      title: "Date",
+      dataIndex: "date",
+      key: "date",
+      sorter: (a, b) => a.date.localeCompare(b.date),
+    },
+    {
+      title: "Quantity",
+      dataIndex: "quantity",
+      key: "quantity",
+      sorter: (a, b) => a.quantity - b.quantity,
+    },
+    {
+      title: "Price",
+      dataIndex: "price",
+      key: "price",
+      sorter: (a, b) => a.price - b.price,
+      render: (price) => `€${price.toFixed(2)}`,
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      render: (_, record) => (
+        <Space>
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            onClick={() => handleEditPurchase(record)}
+          />
+          <Popconfirm
+            title="Delete purchase"
+            description="Are you sure you want to delete this purchase?"
+            onConfirm={() => handleDeletePurchase(record.id)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Button
+              type="text"
+              icon={<DeleteOutlined />}
+              danger
+            />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
+  const purchases = referenceData?.purchases || [];
 
   return (
-    <ReferenceForm
-      reference={{
-        name: "",
-        category: "",
-        domain: "",
-        vintage: 2023,
-      }}
-      onSubmit={createMutate}
-    />
+    <>
+      {contextHolder}
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleSubmit}
+        initialValues={{
+          name: "",
+          category: undefined,
+          domain: "",
+          vintage: new Date().getFullYear(),
+        }}
+      >
+        <Form.Item
+          label="Name"
+          name="name"
+          rules={[{ required: true, message: "Please input the name!" }]}
+        >
+          <Input placeholder="Wine name" />
+        </Form.Item>
+
+        <Form.Item
+          label="Category"
+          name="category"
+        >
+          <Select
+            placeholder="Select category"
+            allowClear
+            showSearch
+            options={categories?.map((cat: string) => ({ value: cat, label: cat }))}
+            filterOption={(input, option) =>
+              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+            }
+            popupRender={(menu) => (
+              <div>
+                {menu}
+                <div style={{ borderTop: '1px solid #f0f0f0', padding: '8px' }}>
+                  {!isAddingCategory ? (
+                    <Button
+                      type="text"
+                      icon={<PlusOutlined />}
+                      onClick={() => setIsAddingCategory(true)}
+                      style={{ width: '100%', textAlign: 'left' }}
+                    >
+                      Add new category
+                    </Button>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <Input
+                        placeholder="Category name"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        onPressEnter={handleAddCategory}
+                        style={{ flex: 1 }}
+                        autoFocus
+                      />
+                      <Button 
+                        type="primary" 
+                        size="small" 
+                        onClick={handleAddCategory}
+                        loading={createCategoryMutation.isPending}
+                      >
+                        Add
+                      </Button>
+                      <Button size="small" onClick={handleCancelAddCategory}>
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          />
+        </Form.Item>
+
+        <Form.Item
+          label="Domain"
+          name="domain"
+        >
+          <Input placeholder="Domain" />
+        </Form.Item>
+
+        <Form.Item
+          label="Vintage"
+          name="vintage"
+        >
+          <InputNumber
+            placeholder="Vintage year"
+            min={1800}
+            max={new Date().getFullYear() + 10}
+            style={{ width: "100%" }}
+          />
+        </Form.Item>
+
+        <Form.Item>
+          <Space>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={createMutation.isPending || updateMutation.isPending}
+            >
+              {reference ? "Update" : "Create"} Reference
+            </Button>
+            <Button onClick={onClose}>Cancel</Button>
+          </Space>
+        </Form.Item>
+      </Form>
+
+      {reference && (
+        <>
+          <Divider />
+          <Space direction="vertical" style={{ width: "100%" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Title level={4}>Purchase History</Title>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => setShowPurchaseForm(true)}
+                disabled={showPurchaseForm}
+              >
+                Add Purchase
+              </Button>
+            </div>
+
+            {showPurchaseForm && (
+              <Form
+                form={purchaseForm}
+                layout="inline"
+                onFinish={handlePurchaseSubmit}
+                style={{ marginBottom: "16px" }}
+              >
+                <Form.Item
+                  name="date"
+                  rules={[{ required: true, message: "Please select date!" }]}
+                >
+                  <DatePicker placeholder="Date" />
+                </Form.Item>
+                <Form.Item
+                  name="quantity"
+                  rules={[{ required: true, message: "Please input quantity!" }]}
+                >
+                  <InputNumber placeholder="Quantity" min={1} />
+                </Form.Item>
+                <Form.Item
+                  name="price"
+                  rules={[{ required: true, message: "Please input price!" }]}
+                >
+                  <InputNumber placeholder="Price" min={0} step={0.01} />
+                </Form.Item>
+                <Form.Item>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    loading={createPurchaseMutation.isPending || updatePurchaseMutation.isPending}
+                  >
+                    {editingPurchase ? "Update" : "Add"}
+                  </Button>
+                </Form.Item>
+                <Form.Item>
+                  <Button onClick={handleCancelPurchase}>Cancel</Button>
+                </Form.Item>
+              </Form>
+            )}
+
+
+            <Table
+              columns={purchaseColumns}
+              dataSource={purchases}
+              rowKey="id"
+              size="small"
+              pagination={false}
+              locale={{ emptyText: "No purchases recorded yet." }}
+            />
+          </Space>
+        </>
+      )}
+    </>
   );
 }

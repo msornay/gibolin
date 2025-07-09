@@ -66,12 +66,18 @@ describe('Category Persistence Issue', () => {
     const nameInput = screen.getByLabelText('Name');
     fireEvent.change(nameInput, { target: { value: 'Test Champagne' } });
 
-    // Click the "+" button to add a new category
-    const addCategoryButton = screen.getByText('+');
-    fireEvent.click(addCategoryButton);
+    // Click the category select to open the dropdown
+    const categorySelect = screen.getByRole('combobox');
+    fireEvent.mouseDown(categorySelect);
+    
+    // Wait for dropdown to open and click the "Add new category" button
+    await waitFor(() => {
+      const addCategoryButton = screen.getByText('Add new category');
+      fireEvent.click(addCategoryButton);
+    });
 
     // Type new category name
-    const newCategoryInput = screen.getByPlaceholderText('New category');
+    const newCategoryInput = screen.getByPlaceholderText('Category name');
     fireEvent.change(newCategoryInput, { target: { value: 'Champagne' } });
 
     // Click Add button
@@ -86,7 +92,7 @@ describe('Category Persistence Issue', () => {
     fireEvent.change(vintageInput, { target: { value: '2020' } });
 
     // Submit form
-    const submitButton = screen.getByText('Submit');
+    const submitButton = screen.getByText('Create Reference');
     fireEvent.click(submitButton);
 
     // Verify the form was submitted with the new category

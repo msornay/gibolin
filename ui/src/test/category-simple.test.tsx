@@ -28,14 +28,25 @@ describe('Simple Category Test', () => {
     vi.clearAllMocks();
   });
 
-  it('should add new category to local state when created', async () => {
+  it('should add new category via server API when created', async () => {
     const mockOnClose = vi.fn();
     
     // Mock categories API to return existing categories
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(['Red', 'White']),
-    });
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(['Red', 'White']),
+      })
+      // Mock category creation API
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ success: true }),
+      })
+      // Mock categories refetch after creation
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(['Red', 'White', 'Rosé']),
+      });
 
     render(
       <ReferenceDetails reference={null} onClose={mockOnClose} />,
@@ -47,25 +58,41 @@ describe('Simple Category Test', () => {
       expect(global.fetch).toHaveBeenCalledWith('http://localhost:8000/api/categories');
     });
 
-    // Click the "+" button to add a new category
-    const addCategoryButton = screen.getByText('+');
-    fireEvent.click(addCategoryButton);
+    // Wait for the category field to be rendered
+    await waitFor(() => {
+      expect(screen.getByText('Category')).toBeInTheDocument();
+    });
+
+    // Click the category select to open the dropdown
+    const categorySelect = screen.getByRole('combobox');
+    fireEvent.mouseDown(categorySelect);
+    
+    // Wait for dropdown to open and click the "Add new category" button
+    await waitFor(() => {
+      const addCategoryButton = screen.getByText('Add new category');
+      fireEvent.click(addCategoryButton);
+    });
 
     // Type new category name
-    const newCategoryInput = screen.getByPlaceholderText('New category');
+    const newCategoryInput = screen.getByPlaceholderText('Category name');
     fireEvent.change(newCategoryInput, { target: { value: 'Rosé' } });
 
     // Click Add button
     const addButton = screen.getByText('Add');
     fireEvent.click(addButton);
 
-    // Should go back to select mode
+    // Should call the API to create category
     await waitFor(() => {
-      expect(screen.queryByPlaceholderText('New category')).not.toBeInTheDocument();
+      expect(global.fetch).toHaveBeenCalledWith('http://localhost:8000/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Rosé' }),
+      });
     });
 
-    // The select should show the new category as selected
-    const selectTrigger = screen.getByRole('combobox');
-    expect(selectTrigger).toHaveTextContent('Rosé');
+    // Should go back to select mode
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText('Category name')).not.toBeInTheDocument();
+    });
   });
 });
