@@ -93,7 +93,6 @@ DATABASES = {
         "PASSWORD": os.getenv("POSTGRES_PASSWORD", default="gibolin"),
         "HOST": os.getenv("POSTGRES_HOST", default="postgres"),
         "PORT": os.getenv("POSTGRES_PORT", default="5432"),
-        "TEST": {"NAME": "gibolin-test"},
     }
 }
 
