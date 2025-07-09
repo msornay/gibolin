@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 import json
 
-from .models import Reference
+from .models import Reference, Purchase
 from .api import sqid_encode, sqid_decode
 
 
@@ -203,3 +203,90 @@ class ReferenceAPITest(TestCase):
             content_type="application/json"
         )
         self.assertEqual(response.status_code, 422)  # Validation error due to extra field
+
+
+class PurchaseAPITest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.reference = Reference.objects.create(
+            name="Test Wine",
+            domain="test.com",
+            vintage=2020
+        )
+        self.purchase = Purchase.objects.create(
+            reference=self.reference,
+            date="2023-01-01",
+            quantity=6,
+            price=15.50
+        )
+
+    def test_create_purchase(self):
+        """Test creating a new purchase"""
+        sqid = sqid_encode(self.reference.id)
+        data = {
+            "date": "2023-02-01",
+            "quantity": 12,
+            "price": 18.00
+        }
+        response = self.client.post(
+            f"/api/ref/{sqid}/purchases",
+            json.dumps(data),
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+        
+        # Verify the purchase was created
+        new_purchase = Purchase.objects.filter(reference=self.reference).latest('id')
+        self.assertEqual(new_purchase.quantity, 12)
+        self.assertEqual(float(new_purchase.price), 18.00)
+
+    def test_list_purchases(self):
+        """Test listing purchases for a reference"""
+        sqid = sqid_encode(self.reference.id)
+        response = self.client.get(f"/api/ref/{sqid}/purchases")
+        self.assertEqual(response.status_code, 200)
+        
+        data = response.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["quantity"], 6)
+        self.assertEqual(data[0]["price"], 15.50)
+
+    def test_update_purchase(self):
+        """Test updating an existing purchase"""
+        data = {
+            "date": "2023-01-15",
+            "quantity": 8,
+            "price": 16.00
+        }
+        response = self.client.put(
+            f"/api/purchase/{self.purchase.id}",
+            json.dumps(data),
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+        
+        # Verify the purchase was updated
+        updated_purchase = Purchase.objects.get(id=self.purchase.id)
+        self.assertEqual(updated_purchase.quantity, 8)
+        self.assertEqual(float(updated_purchase.price), 16.00)
+
+    def test_delete_purchase(self):
+        """Test deleting a purchase"""
+        response = self.client.delete(f"/api/purchase/{self.purchase.id}")
+        self.assertEqual(response.status_code, 200)
+        
+        # Verify the purchase was deleted
+        with self.assertRaises(Purchase.DoesNotExist):
+            Purchase.objects.get(id=self.purchase.id)
+
+    def test_reference_includes_purchases(self):
+        """Test that reference API includes purchase history"""
+        sqid = sqid_encode(self.reference.id)
+        response = self.client.get(f"/api/ref/{sqid}")
+        self.assertEqual(response.status_code, 200)
+        
+        data = response.json()
+        self.assertIn("purchases", data)
+        self.assertEqual(len(data["purchases"]), 1)
+        self.assertEqual(data["purchases"][0]["quantity"], 6)
+        self.assertEqual(data["purchases"][0]["price"], 15.50)

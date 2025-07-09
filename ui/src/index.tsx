@@ -8,11 +8,12 @@ import {
   QueryClientProvider,
   useQuery,
 } from "@tanstack/react-query";
-import { ColumnDef, SortingFn } from "@tanstack/react-table";
+import { ColumnDef } from "@tanstack/react-table";
 
 import { DataTable } from "@/components/data-table";
 import { ReferenceDetails } from "@/components/reference-form";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -20,13 +21,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Edit } from "lucide-react";
 
 // Types
+export type Purchase = {
+  id: number;
+  date: string;
+  quantity: number;
+  price: number;
+};
+
 export type Reference = {
   sqid: string;
   name: string;
   domain: string;
   vintage: number;
+  purchases: Purchase[];
 };
 
 export type RefsResponse = {
@@ -84,12 +94,13 @@ const createColumns = (onEdit: (reference: Reference) => void): ColumnDef<Refere
       const reference = row.original;
 
       return (
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => onEdit(reference)}
-          className="text-blue-600 hover:text-blue-800 underline"
         >
-          Edit
-        </button>
+          <Edit className="h-4 w-4" />
+        </Button>
       );
     },
   },
@@ -165,7 +176,7 @@ function ReferenceTable() {
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>
               {selectedReference ? "Edit Reference" : "New Reference"}
@@ -198,7 +209,10 @@ const router = createBrowserRouter([
 // App Setup
 const queryClient = new QueryClient();
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
+const rootElement = document.getElementById("root")!;
+const root = ReactDOM.createRoot(rootElement);
+
+root.render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />

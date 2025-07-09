@@ -62,6 +62,7 @@ describe('ReferenceDetails', () => {
       name: 'Test Wine',
       domain: 'test.com',
       vintage: 2020,
+      purchases: [],
     };
     
     // Mock fetch to return a pending promise

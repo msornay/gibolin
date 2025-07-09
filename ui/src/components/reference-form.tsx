@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/form";
 
 import { Input } from "@/components/ui/input";
+import { PurchaseHistory } from "./purchase-history";
 
 const formSchema = z.object({
   name: z.string(),
@@ -97,8 +98,10 @@ function ReferenceForm({ reference, onSubmit }: ReferenceFormProps) {
   );
 }
 
+import { Reference } from "../index";
+
 type ReferenceDetailsProps = {
-  reference: { sqid: string; name: string; domain: string; vintage: number } | null;
+  reference: Reference | null;
   onClose: () => void;
 };
 
@@ -141,7 +144,15 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
 
   if (reference !== null) {
     if (data) {
-      return <ReferenceForm reference={data} onSubmit={updateMutate} />;
+      return (
+        <div className="space-y-6">
+          <ReferenceForm reference={data} onSubmit={updateMutate} />
+          <PurchaseHistory 
+            referenceId={reference.sqid} 
+            purchases={data.purchases || []} 
+          />
+        </div>
+      );
     }
     return <div>Loading...</div>;
   }

@@ -1,14 +1,14 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DataTable } from '../components/data-table';
 import { Reference } from '../index';
 
 const mockReferences: Reference[] = [
-  { sqid: '1', name: 'apple Wine', domain: 'Apple.com', vintage: 2020 },
-  { sqid: '2', name: 'Banana Wine', domain: 'banana.com', vintage: 2021 },
-  { sqid: '3', name: 'Cherry Wine', domain: 'CHERRY.com', vintage: 2019 },
+  { sqid: '1', name: 'apple Wine', domain: 'Apple.com', vintage: 2020, purchases: [] },
+  { sqid: '2', name: 'Banana Wine', domain: 'banana.com', vintage: 2021, purchases: [] },
+  { sqid: '3', name: 'Cherry Wine', domain: 'CHERRY.com', vintage: 2019, purchases: [] },
 ];
 
 const createWrapper = () => {
