@@ -3,6 +3,7 @@ from django.db import models
 
 class Reference(models.Model):
     name = models.CharField(max_length=255)
+    category = models.CharField(max_length=255, null=True)
 
     domain = models.CharField(max_length=255, null=True)
     vintage = models.IntegerField(null=True)

@@ -3,7 +3,10 @@
 test: test-api test-ui
 
 test-api:
-	docker-compose exec api python manage.py test cave.tests --settings=gibolin.settings_test
+	docker-compose run api python manage.py test cave.tests
 
 test-ui:
-	docker-compose exec ui npm run test:run
+	docker-compose run ui npm run test:run
+
+reset:
+	docker-compose down -v --remove-orphans

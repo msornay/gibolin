@@ -21,7 +21,6 @@ from django.conf.urls.static import static
 
 from cave.api import api as cave_api
 
-import ninja
 
 
 urlpatterns = [

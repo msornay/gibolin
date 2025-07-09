@@ -67,7 +67,7 @@ class ReferenceOut(ninja.Schema):
     @staticmethod
     def resolve_sqid(obj):
         return sqid_encode(obj.id)
-    
+
     @staticmethod
     def resolve_purchases(obj):
         return [{
@@ -84,9 +84,6 @@ def create_reference(request, reference_in: ReferenceIn):
     return {"sqid": sqids.encode([reference.id])}
 
 
-# XXX(msy) Currently all fields are required. We can make them optional by
-# using a ReferencePatch schema? Is there an easier way w/o using a
-# ninja.ModelSchema?
 @api.put("/ref/{sqid}", response=ReferenceOut)
 def update_reference(request, sqid: str, payload: ReferenceIn):
     reference = get_object_or_404(Reference, id=sqid_decode(sqid))
@@ -131,6 +128,10 @@ def list_categories(request):
     return list(categories)
 
 
+class CategoryIn(ninja.Schema):
+    name: str
+
+
 @api.get("/ref/{sqid}/purchases", response=List[PurchaseOut])
 def list_purchases(request, sqid: str):
     reference = get_object_or_404(Reference, id=sqid_decode(sqid))
@@ -166,10 +167,10 @@ def update_purchase(request, purchase_id: int, purchase_in: PurchaseIn):
     purchase = get_object_or_404(Purchase, id=purchase_id)
     purchase_data = purchase_in.dict()
     purchase_data['date'] = datetime.fromisoformat(purchase_data['date']).date()
-    
+
     for attr, value in purchase_data.items():
         setattr(purchase, attr, value)
-    
+
     purchase.save()
     return {
         'id': purchase.id,
