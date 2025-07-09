@@ -41,12 +41,18 @@ describe('Category Dropdown Issue', () => {
       expect(global.fetch).toHaveBeenCalledWith('http://localhost:8000/api/categories');
     });
 
-    // Click the "+" button to add a new category
-    const addCategoryButton = screen.getByText('+');
-    fireEvent.click(addCategoryButton);
+    // Click the category select to open the dropdown
+    const categorySelect = screen.getByRole('combobox');
+    fireEvent.mouseDown(categorySelect);
+    
+    // Wait for dropdown to open and click the "Add new category" button
+    await waitFor(() => {
+      const addCategoryButton = screen.getByText('Add new category');
+      fireEvent.click(addCategoryButton);
+    });
 
     // Type new category name
-    const newCategoryInput = screen.getByPlaceholderText('New category');
+    const newCategoryInput = screen.getByPlaceholderText('Category name');
     fireEvent.change(newCategoryInput, { target: { value: 'Champagne' } });
 
     // Click Add button
@@ -55,15 +61,21 @@ describe('Category Dropdown Issue', () => {
 
     // The form should now show the new category as selected
     await waitFor(() => {
-      expect(screen.queryByPlaceholderText('New category')).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('Category name')).not.toBeInTheDocument();
     });
 
-    // Now click the "+" button again to add another category
-    const addCategoryButton2 = screen.getByText('+');
-    fireEvent.click(addCategoryButton2);
+    // Now click the category select to open the dropdown again
+    const categorySelect2 = screen.getByRole('combobox');
+    fireEvent.mouseDown(categorySelect2);
+    
+    // Wait for dropdown to open and click the "Add new category" button
+    await waitFor(() => {
+      const addCategoryButton2 = screen.getByText('Add new category');
+      fireEvent.click(addCategoryButton2);
+    });
 
     // Should show input again
-    const newCategoryInput2 = screen.getByPlaceholderText('New category');
+    const newCategoryInput2 = screen.getByPlaceholderText('Category name');
     expect(newCategoryInput2).toBeInTheDocument();
 
     // Cancel to go back to dropdown
@@ -105,11 +117,17 @@ describe('Category Dropdown Issue', () => {
       expect(global.fetch).toHaveBeenCalledWith('http://localhost:8000/api/categories');
     });
 
-    // Add a custom category
-    const addCategoryButton = screen.getByText('+');
-    fireEvent.click(addCategoryButton);
+    // Click the category select to open the dropdown
+    const categorySelect = screen.getByRole('combobox');
+    fireEvent.mouseDown(categorySelect);
+    
+    // Wait for dropdown to open and click the "Add new category" button
+    await waitFor(() => {
+      const addCategoryButton = screen.getByText('Add new category');
+      fireEvent.click(addCategoryButton);
+    });
 
-    const newCategoryInput = screen.getByPlaceholderText('New category');
+    const newCategoryInput = screen.getByPlaceholderText('Category name');
     fireEvent.change(newCategoryInput, { target: { value: 'Rosé' } });
 
     const addButton = screen.getByText('Add');
