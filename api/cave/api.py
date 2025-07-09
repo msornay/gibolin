@@ -34,6 +34,7 @@ def status(request):
 
 class ReferenceIn(ninja.Schema):
     name: str
+    category: Optional[str]
 
     domain: Optional[str]
     vintage: Optional[int]
@@ -58,8 +59,9 @@ class PurchaseOut(ninja.Schema):
 class ReferenceOut(ninja.Schema):
     sqid: str
     name: str
-    domain: str
-    vintage: int
+    category: Optional[str]
+    domain: Optional[str]
+    vintage: Optional[int]
     purchases: List[PurchaseOut]
 
     @staticmethod
@@ -118,6 +120,15 @@ def list_reference(request, search: str = None):
     return Reference.objects.annotate(
         search=SearchVector("name", "domain")
     ).filter(search__icontains=search)
+
+
+@api.get("/categories", response=List[str])
+def list_categories(request):
+    """Get all unique categories from references"""
+    categories = Reference.objects.filter(
+        category__isnull=False
+    ).values_list('category', flat=True).distinct().order_by('category')
+    return list(categories)
 
 
 @api.get("/ref/{sqid}/purchases", response=List[PurchaseOut])

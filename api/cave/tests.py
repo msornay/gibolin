@@ -12,10 +12,12 @@ class ReferenceModelTest(TestCase):
         """Test basic reference creation"""
         reference = Reference.objects.create(
             name="Test Wine",
+            category="Red",
             domain="test.com",
             vintage=2020
         )
         self.assertEqual(reference.name, "Test Wine")
+        self.assertEqual(reference.category, "Red")
         self.assertEqual(reference.domain, "test.com")
         self.assertEqual(reference.vintage, 2020)
 
@@ -23,6 +25,7 @@ class ReferenceModelTest(TestCase):
         """Test reference with optional fields as None"""
         reference = Reference.objects.create(name="Test Wine")
         self.assertEqual(reference.name, "Test Wine")
+        self.assertIsNone(reference.category)
         self.assertIsNone(reference.domain)
         self.assertIsNone(reference.vintage)
 
@@ -41,6 +44,7 @@ class ReferenceAPITest(TestCase):
         self.client = Client()
         self.reference = Reference.objects.create(
             name="Test Wine",
+            category="Red",
             domain="test.com",
             vintage=2020
         )
@@ -55,6 +59,7 @@ class ReferenceAPITest(TestCase):
         """Test creating a new reference"""
         data = {
             "name": "New Wine",
+            "category": "White",
             "domain": "new.com",
             "vintage": 2021
         }
@@ -69,6 +74,7 @@ class ReferenceAPITest(TestCase):
 
         # Verify the reference was created
         new_reference = Reference.objects.get(name="New Wine")
+        self.assertEqual(new_reference.category, "White")
         self.assertEqual(new_reference.domain, "new.com")
         self.assertEqual(new_reference.vintage, 2021)
 
@@ -95,6 +101,7 @@ class ReferenceAPITest(TestCase):
         sqid = sqid_encode(self.reference.id)
         data = {
             "name": "Updated Wine",
+            "category": "Rose",
             "domain": "updated.com",
             "vintage": 2022
         }
@@ -108,6 +115,7 @@ class ReferenceAPITest(TestCase):
         # Verify the reference was updated
         updated_reference = Reference.objects.get(id=self.reference.id)
         self.assertEqual(updated_reference.name, "Updated Wine")
+        self.assertEqual(updated_reference.category, "Rose")
         self.assertEqual(updated_reference.domain, "updated.com")
         self.assertEqual(updated_reference.vintage, 2022)
 
@@ -204,12 +212,31 @@ class ReferenceAPITest(TestCase):
         )
         self.assertEqual(response.status_code, 422)  # Validation error due to extra field
 
+    def test_list_categories(self):
+        """Test listing unique categories"""
+        # Create references with different categories
+        Reference.objects.create(name="Wine 1", category="Bordeaux", domain="test1.com", vintage=2020)
+        Reference.objects.create(name="Wine 2", category="Burgundy", domain="test2.com", vintage=2021)
+        Reference.objects.create(name="Wine 3", category="Bordeaux", domain="test3.com", vintage=2022)
+        Reference.objects.create(name="Wine 4", domain="test4.com", vintage=2023)  # No category
+        
+        response = self.client.get("/api/categories")
+        self.assertEqual(response.status_code, 200)
+        
+        data = response.json()
+        self.assertEqual(len(data), 3)  # 3 unique categories (including self.reference)
+        self.assertIn("Bordeaux", data)
+        self.assertIn("Burgundy", data)
+        self.assertIn("Red", data)  # From self.reference
+        self.assertEqual(data, ["Bordeaux", "Burgundy", "Red"])  # Should be sorted
+
 
 class PurchaseAPITest(TestCase):
     def setUp(self):
         self.client = Client()
         self.reference = Reference.objects.create(
             name="Test Wine",
+            category="Red",
             domain="test.com",
             vintage=2020
         )

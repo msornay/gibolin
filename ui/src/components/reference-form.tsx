@@ -1,3 +1,4 @@
+import React from "react";
 import { useForm } from "react-hook-form";
 
 import {
@@ -20,24 +21,50 @@ import {
 } from "@/components/ui/form";
 
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PurchaseHistory } from "./purchase-history";
 
 const formSchema = z.object({
   name: z.string(),
-  domain: z.string(),
+  category: z.string().optional(),
+  domain: z.string().optional(),
   vintage: z.coerce.number().positive(),
 });
 
 type ReferenceFormProps = {
   reference: {
     name: string;
-    domain: string;
+    category?: string;
+    domain?: string;
     vintage: number;
   };
   onSubmit: (data: any) => void;
 };
 
 function ReferenceForm({ reference, onSubmit }: ReferenceFormProps) {
+  const [newCategory, setNewCategory] = React.useState('');
+  const [showNewCategoryInput, setShowNewCategoryInput] = React.useState(false);
+  const [localCategories, setLocalCategories] = React.useState<string[]>([]);
+  
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => 
+      fetch('http://localhost:8000/api/categories').then(res => res.json()),
+  });
+  
+  // Update local categories when API data changes
+  React.useEffect(() => {
+    if (categories) {
+      setLocalCategories(categories);
+    }
+  }, [categories]);
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: reference,
@@ -62,6 +89,84 @@ function ReferenceForm({ reference, onSubmit }: ReferenceFormProps) {
               <FormControl>
                 <Input placeholder="Name" {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="category"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Category</FormLabel>
+              <div className="space-y-2">
+                {!showNewCategoryInput ? (
+                  <div className="flex space-x-2">
+                    <FormControl>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {localCategories.map((category: string) => (
+                            <SelectItem key={category} value={category}>
+                              {category}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowNewCategoryInput(true)}
+                    >
+                      +
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex space-x-2">
+                    <FormControl>
+                      <Input
+                        placeholder="New category"
+                        value={newCategory}
+                        onChange={(e) => setNewCategory(e.target.value)}
+                      />
+                    </FormControl>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (newCategory.trim()) {
+                          const trimmedCategory = newCategory.trim();
+                          // Add to local categories if not already present
+                          if (!localCategories.includes(trimmedCategory)) {
+                            setLocalCategories(prev => [...prev, trimmedCategory].sort());
+                          }
+                          field.onChange(trimmedCategory);
+                          setNewCategory('');
+                          setShowNewCategoryInput(false);
+                        }
+                      }}
+                    >
+                      Add
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowNewCategoryInput(false);
+                        setNewCategory('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                )}
+              </div>
               <FormMessage />
             </FormItem>
           )}
@@ -126,6 +231,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["references"] });
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
       onClose();
     },
   });
@@ -138,6 +244,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["references"] });
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
       onClose();
     },
   });
@@ -161,6 +268,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
     <ReferenceForm
       reference={{
         name: "",
+        category: "",
         domain: "",
         vintage: 2023,
       }}
