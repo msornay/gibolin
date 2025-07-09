@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('cave', '0002_purchase_delete_order'),
+        ("cave", "0002_purchase_delete_order"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='reference',
-            name='category',
+            model_name="reference",
+            name="category",
             field=models.CharField(max_length=255, null=True),
         ),
     ]

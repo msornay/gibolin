@@ -14,8 +14,10 @@ from .models import Reference, Purchase
 
 sqids = sqids.Sqids(min_length=8)
 
+
 def sqid_encode(id: int):
     return sqids.encode([id])
+
 
 def sqid_decode(sqid: str):
     try:
@@ -40,7 +42,7 @@ class ReferenceIn(ninja.Schema):
     vintage: Optional[int]
 
     class Config:
-        extra = "forbid" # XXX(msy) to test
+        extra = "forbid"  # XXX(msy) to test
 
 
 class PurchaseIn(ninja.Schema):
@@ -70,12 +72,15 @@ class ReferenceOut(ninja.Schema):
 
     @staticmethod
     def resolve_purchases(obj):
-        return [{
-            'id': p.id,
-            'date': p.date.isoformat(),
-            'quantity': p.quantity,
-            'price': float(p.price)
-        } for p in obj.purchases.all()]
+        return [
+            {
+                "id": p.id,
+                "date": p.date.isoformat(),
+                "quantity": p.quantity,
+                "price": float(p.price),
+            }
+            for p in obj.purchases.all()
+        ]
 
 
 @api.post("/ref")
@@ -114,17 +119,20 @@ def list_reference(request, search: str = None):
         return Reference.objects.all()
 
     # keyword matching, but no phrase matching. doing both is not trivial.
-    return Reference.objects.annotate(
-        search=SearchVector("name", "domain")
-    ).filter(search__icontains=search)
+    return Reference.objects.annotate(search=SearchVector("name", "domain")).filter(
+        search__icontains=search
+    )
 
 
 @api.get("/categories", response=List[str])
 def list_categories(request):
     """Get all unique categories from references"""
-    categories = Reference.objects.filter(
-        category__isnull=False
-    ).values_list('category', flat=True).distinct().order_by('category')
+    categories = (
+        Reference.objects.filter(category__isnull=False)
+        .values_list("category", flat=True)
+        .distinct()
+        .order_by("category")
+    )
     return list(categories)
 
 
@@ -137,11 +145,12 @@ def list_purchases(request, sqid: str):
     reference = get_object_or_404(Reference, id=sqid_decode(sqid))
     return [
         {
-            'id': p.id,
-            'date': p.date.isoformat(),
-            'quantity': p.quantity,
-            'price': float(p.price)
-        } for p in reference.purchases.all()
+            "id": p.id,
+            "date": p.date.isoformat(),
+            "quantity": p.quantity,
+            "price": float(p.price),
+        }
+        for p in reference.purchases.all()
     ]
 
 
@@ -149,16 +158,13 @@ def list_purchases(request, sqid: str):
 def create_purchase(request, sqid: str, purchase_in: PurchaseIn):
     reference = get_object_or_404(Reference, id=sqid_decode(sqid))
     purchase_data = purchase_in.dict()
-    purchase_data['date'] = datetime.fromisoformat(purchase_data['date']).date()
-    purchase = Purchase.objects.create(
-        reference=reference,
-        **purchase_data
-    )
+    purchase_data["date"] = datetime.fromisoformat(purchase_data["date"]).date()
+    purchase = Purchase.objects.create(reference=reference, **purchase_data)
     return {
-        'id': purchase.id,
-        'date': purchase.date.isoformat(),
-        'quantity': purchase.quantity,
-        'price': float(purchase.price)
+        "id": purchase.id,
+        "date": purchase.date.isoformat(),
+        "quantity": purchase.quantity,
+        "price": float(purchase.price),
     }
 
 
@@ -166,17 +172,17 @@ def create_purchase(request, sqid: str, purchase_in: PurchaseIn):
 def update_purchase(request, purchase_id: int, purchase_in: PurchaseIn):
     purchase = get_object_or_404(Purchase, id=purchase_id)
     purchase_data = purchase_in.dict()
-    purchase_data['date'] = datetime.fromisoformat(purchase_data['date']).date()
+    purchase_data["date"] = datetime.fromisoformat(purchase_data["date"]).date()
 
     for attr, value in purchase_data.items():
         setattr(purchase, attr, value)
 
     purchase.save()
     return {
-        'id': purchase.id,
-        'date': purchase.date.isoformat(),
-        'quantity': purchase.quantity,
-        'price': float(purchase.price)
+        "id": purchase.id,
+        "date": purchase.date.isoformat(),
+        "quantity": purchase.quantity,
+        "price": float(purchase.price),
     }
 
 

@@ -9,10 +9,7 @@ class ReferenceModelTest(TestCase):
     def test_reference_creation(self):
         """Test basic reference creation"""
         reference = Reference.objects.create(
-            name="Test Wine",
-            category="Red",
-            domain="test.com",
-            vintage=2020
+            name="Test Wine", category="Red", domain="test.com", vintage=2020
         )
         self.assertEqual(reference.name, "Test Wine")
         self.assertEqual(reference.category, "Red")
@@ -41,10 +38,7 @@ class ReferenceAPITest(TestCase):
     def setUp(self):
         self.client = Client()
         self.reference = Reference.objects.create(
-            name="Test Wine",
-            category="Red",
-            domain="test.com",
-            vintage=2020
+            name="Test Wine", category="Red", domain="test.com", vintage=2020
         )
 
     def test_healthcheck(self):
@@ -59,12 +53,10 @@ class ReferenceAPITest(TestCase):
             "name": "New Wine",
             "category": "White",
             "domain": "new.com",
-            "vintage": 2021
+            "vintage": 2021,
         }
         response = self.client.post(
-            "/api/ref",
-            json.dumps(data),
-            content_type="application/json"
+            "/api/ref", json.dumps(data), content_type="application/json"
         )
         self.assertEqual(response.status_code, 200)
         response_data = response.json()
@@ -101,12 +93,10 @@ class ReferenceAPITest(TestCase):
             "name": "Updated Wine",
             "category": "Rose",
             "domain": "updated.com",
-            "vintage": 2022
+            "vintage": 2022,
         }
         response = self.client.put(
-            f"/api/ref/{sqid}",
-            json.dumps(data),
-            content_type="application/json"
+            f"/api/ref/{sqid}", json.dumps(data), content_type="application/json"
         )
         self.assertEqual(response.status_code, 200)
 
@@ -145,8 +135,12 @@ class ReferenceAPITest(TestCase):
     def test_search_references(self):
         """Test searching references"""
         # Create references with different names and domains
-        Reference.objects.create(name="Bordeaux Wine", domain="bordeaux.com", vintage=2020)
-        Reference.objects.create(name="Burgundy Wine", domain="burgundy.com", vintage=2021)
+        Reference.objects.create(
+            name="Bordeaux Wine", domain="bordeaux.com", vintage=2020
+        )
+        Reference.objects.create(
+            name="Burgundy Wine", domain="burgundy.com", vintage=2021
+        )
 
         # Search by name
         response = self.client.get("/api/refs?search=Bordeaux")
@@ -165,22 +159,24 @@ class ReferenceAPITest(TestCase):
     def test_search_references_case_insensitive(self):
         """Test that search is case insensitive"""
         # Create a reference with mixed case
-        Reference.objects.create(name="CamelCase Wine", domain="camelcase.com", vintage=2020)
-        
+        Reference.objects.create(
+            name="CamelCase Wine", domain="camelcase.com", vintage=2020
+        )
+
         # Search with lowercase should find the CamelCase reference
         response = self.client.get("/api/refs?search=camelcase")
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        
+
         # Should find the reference regardless of case
         found = any("CamelCase" in item["name"] for item in data["items"])
         self.assertTrue(found, "Should find CamelCase Wine with lowercase search")
-        
+
         # Search with uppercase should also work
         response = self.client.get("/api/refs?search=CAMELCASE")
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        
+
         found = any("CamelCase" in item["name"] for item in data["items"])
         self.assertTrue(found, "Should find CamelCase Wine with uppercase search")
 
@@ -189,9 +185,7 @@ class ReferenceAPITest(TestCase):
         # Test missing required field
         data = {"domain": "test.com"}
         response = self.client.post(
-            "/api/ref",
-            json.dumps(data),
-            content_type="application/json"
+            "/api/ref", json.dumps(data), content_type="application/json"
         )
         self.assertEqual(response.status_code, 422)  # Validation error
 
@@ -201,26 +195,34 @@ class ReferenceAPITest(TestCase):
             "name": "Test Wine",
             "domain": "test.com",
             "vintage": 2020,
-            "extra_field": "not_allowed"
+            "extra_field": "not_allowed",
         }
         response = self.client.post(
-            "/api/ref",
-            json.dumps(data),
-            content_type="application/json"
+            "/api/ref", json.dumps(data), content_type="application/json"
         )
-        self.assertEqual(response.status_code, 422)  # Validation error due to extra field
+        self.assertEqual(
+            response.status_code, 422
+        )  # Validation error due to extra field
 
     def test_list_categories(self):
         """Test listing unique categories"""
         # Create references with different categories
-        Reference.objects.create(name="Wine 1", category="Bordeaux", domain="test1.com", vintage=2020)
-        Reference.objects.create(name="Wine 2", category="Burgundy", domain="test2.com", vintage=2021)
-        Reference.objects.create(name="Wine 3", category="Bordeaux", domain="test3.com", vintage=2022)
-        Reference.objects.create(name="Wine 4", domain="test4.com", vintage=2023)  # No category
-        
+        Reference.objects.create(
+            name="Wine 1", category="Bordeaux", domain="test1.com", vintage=2020
+        )
+        Reference.objects.create(
+            name="Wine 2", category="Burgundy", domain="test2.com", vintage=2021
+        )
+        Reference.objects.create(
+            name="Wine 3", category="Bordeaux", domain="test3.com", vintage=2022
+        )
+        Reference.objects.create(
+            name="Wine 4", domain="test4.com", vintage=2023
+        )  # No category
+
         response = self.client.get("/api/categories")
         self.assertEqual(response.status_code, 200)
-        
+
         data = response.json()
         self.assertEqual(len(data), 3)  # 3 unique categories (including self.reference)
         self.assertIn("Bordeaux", data)
@@ -233,35 +235,25 @@ class PurchaseAPITest(TestCase):
     def setUp(self):
         self.client = Client()
         self.reference = Reference.objects.create(
-            name="Test Wine",
-            category="Red",
-            domain="test.com",
-            vintage=2020
+            name="Test Wine", category="Red", domain="test.com", vintage=2020
         )
         self.purchase = Purchase.objects.create(
-            reference=self.reference,
-            date="2023-01-01",
-            quantity=6,
-            price=15.50
+            reference=self.reference, date="2023-01-01", quantity=6, price=15.50
         )
 
     def test_create_purchase(self):
         """Test creating a new purchase"""
         sqid = sqid_encode(self.reference.id)
-        data = {
-            "date": "2023-02-01",
-            "quantity": 12,
-            "price": 18.00
-        }
+        data = {"date": "2023-02-01", "quantity": 12, "price": 18.00}
         response = self.client.post(
             f"/api/ref/{sqid}/purchases",
             json.dumps(data),
-            content_type="application/json"
+            content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
-        
+
         # Verify the purchase was created
-        new_purchase = Purchase.objects.filter(reference=self.reference).latest('id')
+        new_purchase = Purchase.objects.filter(reference=self.reference).latest("id")
         self.assertEqual(new_purchase.quantity, 12)
         self.assertEqual(float(new_purchase.price), 18.00)
 
@@ -270,7 +262,7 @@ class PurchaseAPITest(TestCase):
         sqid = sqid_encode(self.reference.id)
         response = self.client.get(f"/api/ref/{sqid}/purchases")
         self.assertEqual(response.status_code, 200)
-        
+
         data = response.json()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0]["quantity"], 6)
@@ -278,18 +270,14 @@ class PurchaseAPITest(TestCase):
 
     def test_update_purchase(self):
         """Test updating an existing purchase"""
-        data = {
-            "date": "2023-01-15",
-            "quantity": 8,
-            "price": 16.00
-        }
+        data = {"date": "2023-01-15", "quantity": 8, "price": 16.00}
         response = self.client.put(
             f"/api/purchase/{self.purchase.id}",
             json.dumps(data),
-            content_type="application/json"
+            content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
-        
+
         # Verify the purchase was updated
         updated_purchase = Purchase.objects.get(id=self.purchase.id)
         self.assertEqual(updated_purchase.quantity, 8)
@@ -299,7 +287,7 @@ class PurchaseAPITest(TestCase):
         """Test deleting a purchase"""
         response = self.client.delete(f"/api/purchase/{self.purchase.id}")
         self.assertEqual(response.status_code, 200)
-        
+
         # Verify the purchase was deleted
         with self.assertRaises(Purchase.DoesNotExist):
             Purchase.objects.get(id=self.purchase.id)
@@ -309,7 +297,7 @@ class PurchaseAPITest(TestCase):
         sqid = sqid_encode(self.reference.id)
         response = self.client.get(f"/api/ref/{sqid}")
         self.assertEqual(response.status_code, 200)
-        
+
         data = response.json()
         self.assertIn("purchases", data)
         self.assertEqual(len(data["purchases"]), 1)

@@ -1,5 +1,9 @@
 .PHONY: test test-api test-ui
 
+lint:
+	docker-compose run --rm api ruff check
+
+
 test: test-api test-ui
 
 test-api:
