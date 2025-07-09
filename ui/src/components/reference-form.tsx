@@ -1,10 +1,9 @@
 import { useForm } from "react-hook-form";
 
-import { useParams, useNavigate } from "react-router-dom";
-
 import {
   useMutation,
   useQuery,
+  useQueryClient,
 } from "@tanstack/react-query";
 
 import { z } from "zod";
@@ -98,26 +97,34 @@ function ReferenceForm({ reference, onSubmit }: ReferenceFormProps) {
   );
 }
 
-export function ReferenceDetails() {
-  let { sqid } = useParams();
-  const navigate = useNavigate();
+type ReferenceDetailsProps = {
+  reference: { sqid: string; name: string; domain: string; vintage: number } | null;
+  onClose: () => void;
+};
 
+export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) {
+  const queryClient = useQueryClient();
+  
   const { data } = useQuery({
-    queryKey: ["reference", sqid],
+    queryKey: ["reference", reference?.sqid],
     queryFn: () =>
-      fetch(`http://localhost:8000/api/ref/${sqid}`).then((res) =>
+      fetch(`http://localhost:8000/api/ref/${reference?.sqid}`).then((res) =>
         res.json(),
       ),
-    enabled: sqid !== undefined,
+    enabled: reference !== null,
     staleTime: Infinity,
   });
 
   const { mutate: updateMutate } = useMutation({
     mutationFn: (values) =>
-      fetch(`http://localhost:8000/api/ref/${sqid}`, {
+      fetch(`http://localhost:8000/api/ref/${reference?.sqid}`, {
         method: "PUT",
         body: JSON.stringify(values),
       }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["references"] });
+      onClose();
+    },
   });
 
   const { mutate: createMutate } = useMutation({
@@ -127,11 +134,12 @@ export function ReferenceDetails() {
         body: JSON.stringify(values),
       }),
     onSuccess: () => {
-      navigate(`/refs`);
+      queryClient.invalidateQueries({ queryKey: ["references"] });
+      onClose();
     },
   });
 
-  if (sqid !== undefined) {
+  if (reference !== null) {
     if (data) {
       return <ReferenceForm reference={data} onSubmit={updateMutate} />;
     }

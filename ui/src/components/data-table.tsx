@@ -19,11 +19,13 @@ import {
 type DataTableProps<TData, TValue> = {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  onNew: () => void;
 };
 
 function DataTableComponent<TData, TValue>({
   columns,
   data,
+  onNew,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
@@ -34,8 +36,8 @@ function DataTableComponent<TData, TValue>({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-end">
-        <Button asChild className="h-8">
-          <a href="/ref/new"> New </a>
+        <Button onClick={onNew} className="h-8">
+          New
         </Button>
       </div>
       <div className="rounded-md border">

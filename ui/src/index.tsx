@@ -13,6 +13,12 @@ import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table";
 import { ReferenceDetails } from "@/components/reference-form";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Types
 export type Reference = {
@@ -40,8 +46,8 @@ const fetchReferences = async (
   return await response.json();
 };
 
-// Define columns outside component to prevent recreation
-const columns: ColumnDef<Reference>[] = [
+// Define columns as a function to access the edit handler
+const createColumns = (onEdit: (reference: Reference) => void): ColumnDef<Reference>[] => [
   {
     accessorKey: "name",
     header: "Name",
@@ -59,7 +65,14 @@ const columns: ColumnDef<Reference>[] = [
     cell: ({ row }) => {
       const reference = row.original;
 
-      return <a href={`/ref/${reference.sqid}`}>Edit</a>;
+      return (
+        <button
+          onClick={() => onEdit(reference)}
+          className="text-blue-600 hover:text-blue-800 underline"
+        >
+          Edit
+        </button>
+      );
     },
   },
 ];
@@ -67,9 +80,26 @@ const columns: ColumnDef<Reference>[] = [
 function ReferenceTable() {
   const [search, setSearch] = React.useState<string>("");
   const [debouncedSearch, setDebouncedSearch] = React.useState<string>("");
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [selectedReference, setSelectedReference] = React.useState<Reference | null>(null);
 
   const handleSearchChange = React.useCallback((value: string) => {
     setSearch(value);
+  }, []);
+
+  const handleNewReference = React.useCallback(() => {
+    setSelectedReference(null);
+    setIsModalOpen(true);
+  }, []);
+
+  const handleEditReference = React.useCallback((reference: Reference) => {
+    setSelectedReference(reference);
+    setIsModalOpen(true);
+  }, []);
+
+  const handleCloseModal = React.useCallback(() => {
+    setIsModalOpen(false);
+    setSelectedReference(null);
   }, []);
 
   // Debounce search to prevent excessive API calls
@@ -84,6 +114,8 @@ function ReferenceTable() {
     queryKey: ["references", debouncedSearch],
     queryFn: () => fetchReferences(0, debouncedSearch),
   });
+
+  const columns = React.useMemo(() => createColumns(handleEditReference), [handleEditReference]);
 
   return (
     <div className="container mx-auto py-10">
@@ -109,9 +141,24 @@ function ReferenceTable() {
           <DataTable
             columns={columns}
             data={data?.items || []}
+            onNew={handleNewReference}
           />
         )}
       </div>
+
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedReference ? "Edit Reference" : "New Reference"}
+            </DialogTitle>
+          </DialogHeader>
+          <ReferenceDetails
+            reference={selectedReference}
+            onClose={handleCloseModal}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -124,14 +171,6 @@ const router = createBrowserRouter([
   {
     path: "/refs",
     element: <ReferenceTable />,
-  },
-  {
-    path: "/ref/new",
-    element: <ReferenceDetails />,
-  },
-  {
-    path: "/ref/:sqid",
-    element: <ReferenceDetails />,
   },
 ]);
 
