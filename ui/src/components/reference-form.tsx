@@ -1,12 +1,8 @@
-"use client";
-
 import { useForm } from "react-hook-form";
 
 import { useParams, useNavigate } from "react-router-dom";
 
 import {
-  QueryClient,
-  QueryClientProvider,
   useMutation,
   useQuery,
 } from "@tanstack/react-query";
@@ -18,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -33,7 +28,16 @@ const formSchema = z.object({
   vintage: z.coerce.number().positive(),
 });
 
-function ReferenceForm({ reference, onSubmit }) {
+type ReferenceFormProps = {
+  reference: {
+    name: string;
+    domain: string;
+    vintage: number;
+  };
+  onSubmit: (data: any) => void;
+};
+
+function ReferenceForm({ reference, onSubmit }: ReferenceFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: reference,
@@ -126,7 +130,7 @@ export function ReferenceDetails() {
         method: "POST",
         body: JSON.stringify(values),
       }),
-    onSuccess: (data) => {
+    onSuccess: () => {
       navigate(`/refs`);
     },
   });

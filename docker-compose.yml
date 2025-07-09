@@ -30,7 +30,8 @@ services:
       - '3000:3000'
     volumes:
       - ./ui:/app
-    command: npm run dev --host
+      - /app/node_modules
+    command: npm run dev
     depends_on:
       - api
 
