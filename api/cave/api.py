@@ -251,6 +251,18 @@ def update_nested_menu_order(request, order_in: NestedOrderIn):
     return {"success": True}
 
 
+class CategoryColorIn(ninja.Schema):
+    name: str
+    color: str
+
+
+@api.put("/categories/color")
+def update_category_color(request, color_in: CategoryColorIn):
+    """Update the color of a category"""
+    Category.objects.filter(name=color_in.name).update(color=color_in.color)
+    return {"success": True}
+
+
 @api.get("/menu/structure")
 def get_menu_structure(request):
     """Get the current menu structure with categories and regions"""
@@ -266,7 +278,8 @@ def get_menu_structure(request):
         category_item = {
             "type": "category",
             "name": category.name,
-            "order": category.order
+            "order": category.order,
+            "color": category.color
         }
         structure.append(category_item)
         
@@ -292,7 +305,8 @@ def get_menu_structure(request):
         structure.append({
             "type": "category", 
             "name": "Other Selections",
-            "order": 999
+            "order": 999,
+            "color": "#666666"
         })
         
         # Add regions in Other Selections
@@ -537,8 +551,12 @@ def export_wine_menu_html(request):
         </div>
     """
     
-    # Add categories and regions with wines
-    for category_name in [cat.name for cat in categories] + ['Other Selections']:
+    # Add categories and regions with wines  
+    all_categories = list(categories) + [type('obj', (object,), {'name': 'Other Selections', 'color': '#666666'})()]
+    
+    for category in all_categories:
+        category_name = category.name
+        category_color = category.color
         category_regions = nested_groups.get(category_name, {})
         
         # Check if category has any wines
@@ -547,7 +565,7 @@ def export_wine_menu_html(request):
             continue
             
         html_content += f'<div class="category">'
-        html_content += f'<div class="category-title">{category_name}</div>'
+        html_content += f'<div class="category-title" style="color: {category_color};">{category_name}</div>'
         
         # Add regions within this category
         for region_name in [reg.name for reg in regions] + ['No Region']:
@@ -557,7 +575,7 @@ def export_wine_menu_html(request):
                 
             # Always show region title except for "No Region"
             if region_name != 'No Region':
-                html_content += f'<div class="region-title">{region_name}</div>'
+                html_content += f'<div class="region-title" style="color: {category_color};">{region_name}</div>'
             
             for ref in region_wines:
                 # Build wine details text (no need to show region again since it's in header)

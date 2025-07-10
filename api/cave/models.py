@@ -4,6 +4,7 @@ from django.db import models
 class Category(models.Model):
     name = models.CharField(max_length=255, unique=True)
     order = models.IntegerField(default=0)
+    color = models.CharField(max_length=7, default='#000000')  # Hex color code
 
     class Meta:
         verbose_name_plural = "categories"

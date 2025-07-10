@@ -21,6 +21,7 @@ import {
   Card
 } from "antd";
 import { EditOutlined, PlusOutlined, ExportOutlined, HolderOutlined } from "@ant-design/icons";
+import { SketchPicker } from "react-color";
 import type { ColumnsType } from "antd/es/table";
 
 import { ReferenceDetails } from "@/components/reference-form";
@@ -73,6 +74,7 @@ function ReferenceTable() {
   const [isExportModalOpen, setIsExportModalOpen] = React.useState(false);
   const [categoryOrder, setCategoryOrder] = React.useState<string[]>([]);
   const [menuStructure, setMenuStructure] = React.useState<any[]>([]);
+  const [colorPickerOpen, setColorPickerOpen] = React.useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const handleSearchChange = React.useCallback((value: string) => {
@@ -189,6 +191,19 @@ function ReferenceTable() {
     },
   });
 
+  // Save category color to server
+  const saveCategoryColorMutation = useMutation({
+    mutationFn: ({ name, color }: { name: string; color: string }) =>
+      fetch('http://localhost:8000/api/categories/color', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, color }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['menuStructure'] });
+    },
+  });
+
   const saveCategoryOrder = React.useCallback((newOrder: string[]) => {
     setCategoryOrder(newOrder);
     saveCategoryOrderMutation.mutate(newOrder);
@@ -210,6 +225,20 @@ function ReferenceTable() {
     setMenuStructure(newStructure);
     saveMenuOrderMutation.mutate(newStructure);
   }, [menuStructure, saveMenuOrderMutation]);
+
+  // Handle color change
+  const handleColorChange = React.useCallback((categoryName: string, color: string) => {
+    // Update local state
+    const newStructure = menuStructure.map(item => 
+      item.type === 'category' && item.name === categoryName 
+        ? { ...item, color }
+        : item
+    );
+    setMenuStructure(newStructure);
+    
+    // Save to server
+    saveCategoryColorMutation.mutate({ name: categoryName, color });
+  }, [menuStructure, saveCategoryColorMutation]);
 
   const columns: ColumnsType<Reference> = [
     {
@@ -383,7 +412,46 @@ function ReferenceTable() {
             >
               <HolderOutlined style={{ color: '#999' }} />
               {item.type === 'category' ? (
-                <strong>{item.name}</strong>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+                  <strong>{item.name}</strong>
+                  <div style={{ position: 'relative' }}>
+                    <div
+                      onClick={() => setColorPickerOpen(colorPickerOpen === item.name ? null : item.name)}
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        backgroundColor: item.color || '#000000',
+                        border: '2px solid #fff',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        boxShadow: '0 0 0 1px rgba(0,0,0,0.1)',
+                      }}
+                    />
+                    {colorPickerOpen === item.name && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '25px',
+                        left: '0',
+                        zIndex: 1000,
+                      }}>
+                        <div
+                          style={{
+                            position: 'fixed',
+                            top: '0',
+                            left: '0',
+                            right: '0',
+                            bottom: '0',
+                          }}
+                          onClick={() => setColorPickerOpen(null)}
+                        />
+                        <SketchPicker
+                          color={item.color || '#000000'}
+                          onChange={(color) => handleColorChange(item.name, color.hex)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
               ) : (
                 <span style={{ fontStyle: 'italic', color: '#666' }}>
                   {item.name} <small>(in {item.parent})</small>
