@@ -1,12 +1,30 @@
 from django.db import models
 
 
+class Category(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+
+    class Meta:
+        verbose_name_plural = "categories"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class Reference(models.Model):
     name = models.CharField(max_length=255)
-    category = models.CharField(max_length=255, null=True)
+    category = models.ForeignKey(
+        Category, on_delete=models.SET_NULL, null=True, blank=True, related_name="references"
+    )
+    domain = models.CharField(max_length=255, null=True, blank=True)
+    vintage = models.IntegerField(null=True, blank=True)
 
-    domain = models.CharField(max_length=255, null=True)
-    vintage = models.IntegerField(null=True)
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
 
 
 class Purchase(models.Model):

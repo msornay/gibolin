@@ -9,7 +9,7 @@ import ninja
 from ninja.pagination import paginate as ninja_paginate
 import sqids
 
-from .models import Reference, Purchase
+from .models import Reference, Purchase, Category
 
 
 sqids = sqids.Sqids(min_length=8)
@@ -36,7 +36,7 @@ def status(request):
 
 class ReferenceIn(ninja.Schema):
     name: str
-    category: Optional[str]
+    category: Optional[str]  # Will be category name, converted to Category object
 
     domain: Optional[str]
     vintage: Optional[int]
@@ -71,6 +71,10 @@ class ReferenceOut(ninja.Schema):
         return sqid_encode(obj.id)
 
     @staticmethod
+    def resolve_category(obj):
+        return obj.category.name if obj.category else None
+
+    @staticmethod
     def resolve_purchases(obj):
         return [
             {
@@ -85,15 +89,31 @@ class ReferenceOut(ninja.Schema):
 
 @api.post("/ref")
 def create_reference(request, reference_in: ReferenceIn):
-    reference = Reference.objects.create(**reference_in.dict())
+    data = reference_in.dict()
+    category = None
+    
+    if data.get('category'):
+        category, _ = Category.objects.get_or_create(name=data['category'])
+        data['category'] = category
+    
+    reference = Reference.objects.create(**data)
     return {"sqid": sqids.encode([reference.id])}
 
 
 @api.put("/ref/{sqid}", response=ReferenceOut)
 def update_reference(request, sqid: str, payload: ReferenceIn):
     reference = get_object_or_404(Reference, id=sqid_decode(sqid))
+    data = payload.dict()
 
-    for attr, value in payload.dict().items():
+    if 'category' in data:
+        if data['category']:
+            category, _ = Category.objects.get_or_create(name=data['category'])
+            reference.category = category
+        else:
+            reference.category = None
+        del data['category']
+
+    for attr, value in data.items():
         setattr(reference, attr, value)
 
     reference.save()
@@ -126,18 +146,19 @@ def list_reference(request, search: str = None):
 
 @api.get("/categories", response=List[str])
 def list_categories(request):
-    """Get all unique categories from references"""
-    categories = (
-        Reference.objects.filter(category__isnull=False)
-        .values_list("category", flat=True)
-        .distinct()
-        .order_by("category")
-    )
-    return list(categories)
+    """Get all categories"""
+    return list(Category.objects.values_list("name", flat=True))
 
 
 class CategoryIn(ninja.Schema):
     name: str
+
+
+@api.post("/categories")
+def create_category(request, category_in: CategoryIn):
+    """Create a new category"""
+    category, created = Category.objects.get_or_create(name=category_in.name)
+    return {"name": category.name, "created": created}
 
 
 @api.get("/ref/{sqid}/purchases", response=List[PurchaseOut])
