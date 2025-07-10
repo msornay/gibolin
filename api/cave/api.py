@@ -161,6 +161,18 @@ def create_category(request, category_in: CategoryIn):
     return {"name": category.name, "created": created}
 
 
+class CategoryOrderIn(ninja.Schema):
+    categories: List[str]  # List of category names in desired order
+
+
+@api.put("/categories/order")
+def update_category_order(request, order_in: CategoryOrderIn):
+    """Update the order of categories"""
+    for index, category_name in enumerate(order_in.categories):
+        Category.objects.filter(name=category_name).update(order=index)
+    return {"success": True}
+
+
 @api.get("/ref/{sqid}/purchases", response=List[PurchaseOut])
 def list_purchases(request, sqid: str):
     reference = get_object_or_404(Reference, id=sqid_decode(sqid))

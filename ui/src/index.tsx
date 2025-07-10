@@ -6,6 +6,8 @@ import {
   QueryClient,
   QueryClientProvider,
   useQuery,
+  useMutation,
+  useQueryClient,
 } from "@tanstack/react-query";
 import { 
   Table, 
@@ -14,9 +16,11 @@ import {
   Modal, 
   Space,
   Typography,
-  App as AntApp
+  App as AntApp,
+  List,
+  Card
 } from "antd";
-import { EditOutlined, PlusOutlined, ExportOutlined } from "@ant-design/icons";
+import { EditOutlined, PlusOutlined, ExportOutlined, HolderOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 
 import { ReferenceDetails } from "@/components/reference-form";
@@ -65,6 +69,9 @@ function ReferenceTable() {
   const [debouncedSearch, setDebouncedSearch] = React.useState<string>("");
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [selectedReference, setSelectedReference] = React.useState<Reference | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = React.useState(false);
+  const [categoryOrder, setCategoryOrder] = React.useState<string[]>([]);
+  const queryClient = useQueryClient();
 
   const handleSearchChange = React.useCallback((value: string) => {
     setSearch(value);
@@ -86,8 +93,11 @@ function ReferenceTable() {
   }, []);
 
   const handleExport = React.useCallback(() => {
-    // TODO: Implement export functionality
-    console.log('Export clicked');
+    setIsExportModalOpen(true);
+  }, []);
+
+  const handleExportModalClose = React.useCallback(() => {
+    setIsExportModalOpen(false);
   }, []);
 
   // Debounce search to prevent excessive API calls
@@ -102,6 +112,46 @@ function ReferenceTable() {
     queryKey: ["references", debouncedSearch],
     queryFn: () => fetchReferences(0, debouncedSearch),
   });
+
+  // Fetch categories
+  const { data: categories } = useQuery({
+    queryKey: ["categories"],
+    queryFn: () => 
+      fetch('http://localhost:8000/api/categories').then(res => res.json()),
+  });
+
+  // Set category order from server data (already ordered by server)
+  React.useEffect(() => {
+    if (categories) {
+      setCategoryOrder([...categories]);
+    }
+  }, [categories]);
+
+  // Save category order to server
+  const saveCategoryOrderMutation = useMutation({
+    mutationFn: (newOrder: string[]) =>
+      fetch('http://localhost:8000/api/categories/order', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categories: newOrder }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+    },
+  });
+
+  const saveCategoryOrder = React.useCallback((newOrder: string[]) => {
+    setCategoryOrder(newOrder);
+    saveCategoryOrderMutation.mutate(newOrder);
+  }, [saveCategoryOrderMutation]);
+
+  // Handle drag end for category reordering
+  const handleCategoryDragEnd = React.useCallback((fromIndex: number, toIndex: number) => {
+    const newOrder = [...categoryOrder];
+    const [removed] = newOrder.splice(fromIndex, 1);
+    newOrder.splice(toIndex, 0, removed);
+    saveCategoryOrder(newOrder);
+  }, [categoryOrder, saveCategoryOrder]);
 
   const columns: ColumnsType<Reference> = [
     {
@@ -210,6 +260,65 @@ function ReferenceTable() {
           reference={selectedReference}
           onClose={handleCloseModal}
         />
+      </Modal>
+
+      <Modal
+        title="Export Settings"
+        open={isExportModalOpen}
+        onCancel={handleExportModalClose}
+        footer={[
+          <Button key="cancel" onClick={handleExportModalClose}>
+            Cancel
+          </Button>,
+          <Button key="export" type="primary" onClick={handleExportModalClose}>
+            Export
+          </Button>,
+        ]}
+        width={600}
+      >
+        <div style={{ marginBottom: '16px' }}>
+          <Typography.Text strong>Category Order</Typography.Text>
+          <Typography.Paragraph type="secondary" style={{ marginTop: '4px' }}>
+            Drag categories to reorder them. This order will be used for export and will persist.
+          </Typography.Paragraph>
+        </div>
+        
+        <Card size="small">
+          {categoryOrder.map((category, index) => (
+            <div
+              key={category}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/plain', index.toString());
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                handleCategoryDragEnd(fromIndex, index);
+              }}
+              style={{
+                padding: '8px 12px',
+                margin: '4px 0',
+                backgroundColor: '#f9f9f9',
+                border: '1px solid #d9d9d9',
+                borderRadius: '4px',
+                cursor: 'move',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <HolderOutlined style={{ color: '#999' }} />
+              {category || 'Uncategorized'}
+            </div>
+          ))}
+          {categoryOrder.length === 0 && (
+            <Typography.Text type="secondary">No categories found</Typography.Text>
+          )}
+        </Card>
       </Modal>
     </div>
   );
