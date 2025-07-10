@@ -16,7 +16,7 @@ import {
   Typography,
   App as AntApp
 } from "antd";
-import { EditOutlined, PlusOutlined } from "@ant-design/icons";
+import { EditOutlined, PlusOutlined, ExportOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 
 import { ReferenceDetails } from "@/components/reference-form";
@@ -83,6 +83,11 @@ function ReferenceTable() {
   const handleCloseModal = React.useCallback(() => {
     setIsModalOpen(false);
     setSelectedReference(null);
+  }, []);
+
+  const handleExport = React.useCallback(() => {
+    // TODO: Implement export functionality
+    console.log('Export clicked');
   }, []);
 
   // Debounce search to prevent excessive API calls
@@ -157,7 +162,15 @@ function ReferenceTable() {
 
   return (
     <div style={{ padding: "20px" }}>
-      <Title level={2}>References</Title>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <Title level={2} style={{ margin: 0 }}>References</Title>
+        <Button
+          icon={<ExportOutlined />}
+          onClick={handleExport}
+        >
+          Export
+        </Button>
+      </div>
       
       <Space style={{ marginBottom: "16px" }}>
         <Search
