@@ -9,7 +9,7 @@ import ninja
 from ninja.pagination import paginate as ninja_paginate
 import sqids
 
-from .models import Reference, Purchase, Category
+from .models import Reference, Purchase, Category, Region
 
 
 sqids = sqids.Sqids(min_length=8)
@@ -37,6 +37,7 @@ def status(request):
 class ReferenceIn(ninja.Schema):
     name: str
     category: Optional[str]  # Will be category name, converted to Category object
+    region: Optional[str]  # Will be region name, converted to Region object
 
     domain: Optional[str]
     vintage: Optional[int]
@@ -62,6 +63,7 @@ class ReferenceOut(ninja.Schema):
     sqid: str
     name: str
     category: Optional[str]
+    region: Optional[str]
     domain: Optional[str]
     vintage: Optional[int]
     purchases: List[PurchaseOut]
@@ -73,6 +75,10 @@ class ReferenceOut(ninja.Schema):
     @staticmethod
     def resolve_category(obj):
         return obj.category.name if obj.category else None
+
+    @staticmethod
+    def resolve_region(obj):
+        return obj.region.name if obj.region else None
 
     @staticmethod
     def resolve_purchases(obj):
@@ -90,11 +96,14 @@ class ReferenceOut(ninja.Schema):
 @api.post("/ref")
 def create_reference(request, reference_in: ReferenceIn):
     data = reference_in.dict()
-    category = None
     
     if data.get('category'):
         category, _ = Category.objects.get_or_create(name=data['category'])
         data['category'] = category
+    
+    if data.get('region'):
+        region, _ = Region.objects.get_or_create(name=data['region'])
+        data['region'] = region
     
     reference = Reference.objects.create(**data)
     return {"sqid": sqids.encode([reference.id])}
@@ -112,6 +121,14 @@ def update_reference(request, sqid: str, payload: ReferenceIn):
         else:
             reference.category = None
         del data['category']
+
+    if 'region' in data:
+        if data['region']:
+            region, _ = Region.objects.get_or_create(name=data['region'])
+            reference.region = region
+        else:
+            reference.region = None
+        del data['region']
 
     for attr, value in data.items():
         setattr(reference, attr, value)
@@ -173,6 +190,129 @@ def update_category_order(request, order_in: CategoryOrderIn):
     return {"success": True}
 
 
+@api.get("/regions", response=List[str])
+def list_regions(request):
+    """Get all regions"""
+    return list(Region.objects.values_list("name", flat=True))
+
+
+class RegionIn(ninja.Schema):
+    name: str
+
+
+@api.post("/regions")
+def create_region(request, region_in: RegionIn):
+    """Create a new region"""
+    region, created = Region.objects.get_or_create(name=region_in.name)
+    return {"name": region.name, "created": created}
+
+
+class RegionOrderIn(ninja.Schema):
+    regions: List[str]  # List of region names in desired order
+
+
+@api.put("/regions/order")
+def update_region_order(request, order_in: RegionOrderIn):
+    """Update the order of regions"""
+    for index, region_name in enumerate(order_in.regions):
+        Region.objects.filter(name=region_name).update(order=index)
+    return {"success": True}
+
+
+class NestedOrderItem(ninja.Schema):
+    type: str  # "category" or "region"
+    name: str
+    parent: Optional[str] = None  # category name if this is a region
+
+
+class NestedOrderIn(ninja.Schema):
+    items: List[NestedOrderItem]
+
+
+@api.put("/menu/order")
+def update_nested_menu_order(request, order_in: NestedOrderIn):
+    """Update the nested order of categories and regions"""
+    category_order = 0
+    current_category = None
+    region_order = 0
+    
+    for item in order_in.items:
+        if item.type == "category":
+            # Update category order
+            Category.objects.filter(name=item.name).update(order=category_order)
+            category_order += 1
+            current_category = item.name
+            region_order = 0  # Reset region order for new category
+        elif item.type == "region":
+            # Update region order within the current category
+            Region.objects.filter(name=item.name).update(order=region_order)
+            region_order += 1
+    
+    return {"success": True}
+
+
+@api.get("/menu/structure")
+def get_menu_structure(request):
+    """Get the current menu structure with categories and regions"""
+    # Get all categories with their wines and regions
+    categories = Category.objects.all()
+    regions = Region.objects.all()
+    references = Reference.objects.select_related('category', 'region').all()
+    
+    # Build structure showing which regions have wines in each category
+    structure = []
+    
+    for category in categories:
+        category_item = {
+            "type": "category",
+            "name": category.name,
+            "order": category.order
+        }
+        structure.append(category_item)
+        
+        # Find regions that have wines in this category
+        category_regions = set()
+        for ref in references:
+            if ref.category and ref.category.name == category.name and ref.region:
+                category_regions.add(ref.region.name)
+        
+        # Add regions in order
+        for region in regions:
+            if region.name in category_regions:
+                structure.append({
+                    "type": "region",
+                    "name": region.name,
+                    "parent": category.name,
+                    "order": region.order
+                })
+    
+    # Add "Other Selections" category
+    other_refs = [ref for ref in references if not ref.category]
+    if other_refs:
+        structure.append({
+            "type": "category", 
+            "name": "Other Selections",
+            "order": 999
+        })
+        
+        # Add regions in Other Selections
+        other_regions = set()
+        for ref in other_refs:
+            if ref.region:
+                other_regions.add(ref.region.name)
+        
+        for region in regions:
+            if region.name in other_regions:
+                structure.append({
+                    "type": "region",
+                    "name": region.name,
+                    "parent": "Other Selections",
+                    "order": region.order
+                })
+    
+    return {"structure": structure}
+
+
 @api.get("/ref/{sqid}/purchases", response=List[PurchaseOut])
 def list_purchases(request, sqid: str):
     reference = get_object_or_404(Reference, id=sqid_decode(sqid))
@@ -230,30 +370,47 @@ def delete_purchase(request, purchase_id: int):
 def export_wine_menu_html(request):
     """Generate HTML wine menu for printing"""
     
-    # Get all references with their categories
-    references = Reference.objects.select_related('category').all()
+    # Get all references with their categories and regions
+    references = Reference.objects.select_related('category', 'region').all()
     
-    # Get categories in order
+    # Get categories and regions in order
     categories = Category.objects.all()
+    regions = Region.objects.all()
     
-    # Group references by category
-    category_groups = {}
+    # Create nested structure: category -> region -> wines
+    nested_groups = {}
+    
+    # Initialize category groups
     for category in categories:
-        category_groups[category.name] = []
+        nested_groups[category.name] = {}
+        # Initialize region groups within each category
+        for region in regions:
+            nested_groups[category.name][region.name] = []
+        # Add "No Region" group for wines without region
+        nested_groups[category.name]['No Region'] = []
     
-    # Add uncategorized group
-    category_groups['Other Selections'] = []
+    # Add "Other Selections" category
+    nested_groups['Other Selections'] = {}
+    for region in regions:
+        nested_groups['Other Selections'][region.name] = []
+    nested_groups['Other Selections']['No Region'] = []
     
-    # Group references
+    # Group references by category then region
     for ref in references:
-        if ref.category:
-            category_groups[ref.category.name].append(ref)
-        else:
-            category_groups['Other Selections'].append(ref)
+        category_name = ref.category.name if ref.category else 'Other Selections'
+        region_name = ref.region.name if ref.region else 'No Region'
+        
+        if category_name not in nested_groups:
+            nested_groups[category_name] = {}
+        if region_name not in nested_groups[category_name]:
+            nested_groups[category_name][region_name] = []
+            
+        nested_groups[category_name][region_name].append(ref)
     
-    # Sort references within each category
-    for category_refs in category_groups.values():
-        category_refs.sort(key=lambda x: x.name or '')
+    # Sort wines within each region
+    for category_regions in nested_groups.values():
+        for region_wines in category_regions.values():
+            region_wines.sort(key=lambda x: x.name or '')
     
     # Generate HTML
     html_content = f"""
@@ -342,6 +499,15 @@ def export_wine_menu_html(request):
                 border-bottom: 1px solid #ccc;
             }}
             
+            .region-title {{
+                font-size: 14pt;
+                font-weight: bold;
+                margin: 15px 0 10px 0;
+                padding: 4px 0 4px 20px;
+                color: #666;
+                font-style: italic;
+            }}
+            
             .wine-item {{
                 display: flex;
                 justify-content: space-between;
@@ -371,32 +537,46 @@ def export_wine_menu_html(request):
         </div>
     """
     
-    # Add categories and wines
-    for category_name, category_refs in category_groups.items():
-        if not category_refs:
+    # Add categories and regions with wines
+    for category_name in [cat.name for cat in categories] + ['Other Selections']:
+        category_regions = nested_groups.get(category_name, {})
+        
+        # Check if category has any wines
+        has_wines = any(len(wines) > 0 for wines in category_regions.values())
+        if not has_wines:
             continue
             
         html_content += f'<div class="category">'
         html_content += f'<div class="category-title">{category_name}</div>'
         
-        for ref in category_refs:
-            # Build wine details text
-            wine_text = ref.name or 'Unknown Wine'
-            details = []
-            if ref.domain:
-                details.append(ref.domain)
-            if ref.vintage:
-                details.append(str(ref.vintage))
+        # Add regions within this category
+        for region_name in [reg.name for reg in regions] + ['No Region']:
+            region_wines = category_regions.get(region_name, [])
+            if not region_wines:
+                continue
+                
+            # Always show region title except for "No Region"
+            if region_name != 'No Region':
+                html_content += f'<div class="region-title">{region_name}</div>'
             
-            if details:
-                wine_text += f" - {' • '.join(details)}"
-            
-            html_content += f'''
-            <div class="wine-item">
-                <div class="wine-details">{wine_text}</div>
-                <div class="wine-price">€0</div>
-            </div>
-            '''
+            for ref in region_wines:
+                # Build wine details text (no need to show region again since it's in header)
+                wine_text = ref.name or 'Unknown Wine'
+                details = []
+                if ref.domain:
+                    details.append(ref.domain)
+                if ref.vintage:
+                    details.append(str(ref.vintage))
+                
+                if details:
+                    wine_text += f" - {' • '.join(details)}"
+                
+                html_content += f'''
+                <div class="wine-item">
+                    <div class="wine-details">{wine_text}</div>
+                    <div class="wine-price">€0</div>
+                </div>
+                '''
         
         html_content += '</div>'
     

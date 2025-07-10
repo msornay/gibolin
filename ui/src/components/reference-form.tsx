@@ -40,12 +40,21 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   const [purchaseForm] = Form.useForm();
   const [newCategoryName, setNewCategoryName] = React.useState("");
   const [isAddingCategory, setIsAddingCategory] = React.useState(false);
+  const [newRegionName, setNewRegionName] = React.useState("");
+  const [isAddingRegion, setIsAddingRegion] = React.useState(false);
 
   // Fetch categories
   const { data: categories, refetch: refetchCategories } = useQuery({
     queryKey: ['categories'],
     queryFn: () => 
       fetch('http://localhost:8000/api/categories').then(res => res.json()),
+  });
+
+  // Fetch regions
+  const { data: regions, refetch: refetchRegions } = useQuery({
+    queryKey: ['regions'],
+    queryFn: () => 
+      fetch('http://localhost:8000/api/regions').then(res => res.json()),
   });
 
 
@@ -71,8 +80,10 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["references"] });
       queryClient.invalidateQueries({ queryKey: ["categories"] });
+      queryClient.invalidateQueries({ queryKey: ["regions"] });
       queryClient.invalidateQueries({ queryKey: ["reference", reference?.sqid] });
       refetchCategories(); // Force refetch categories
+      refetchRegions(); // Force refetch regions
       messageApi.success("Reference updated successfully");
       onClose();
     },
@@ -98,6 +109,23 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
     },
   });
 
+  // Create region mutation
+  const createRegionMutation = useMutation({
+    mutationFn: (regionName: string) =>
+      fetch(`http://localhost:8000/api/regions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: regionName }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["regions"] });
+      messageApi.success("Region created successfully");
+    },
+    onError: () => {
+      messageApi.error("Failed to create region");
+    },
+  });
+
   // Create reference mutation
   const createMutation = useMutation({
     mutationFn: (values: any) =>
@@ -109,7 +137,9 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["references"] });
       queryClient.invalidateQueries({ queryKey: ["categories"] });
+      queryClient.invalidateQueries({ queryKey: ["regions"] });
       refetchCategories();
+      refetchRegions();
       messageApi.success("Reference created successfully");
       onClose();
     },
@@ -248,6 +278,33 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
     setIsAddingCategory(false);
   };
 
+  // Handle new region creation
+  const handleAddRegion = () => {
+    if (newRegionName.trim()) {
+      const trimmedName = newRegionName.trim();
+      
+      // Check if region already exists
+      if (regions?.includes(trimmedName)) {
+        messageApi.warning("Region already exists");
+        return;
+      }
+      
+      // Create region server-side
+      createRegionMutation.mutate(trimmedName, {
+        onSuccess: () => {
+          form.setFieldsValue({ region: trimmedName });
+          setNewRegionName("");
+          setIsAddingRegion(false);
+        }
+      });
+    }
+  };
+
+  const handleCancelAddRegion = () => {
+    setNewRegionName("");
+    setIsAddingRegion(false);
+  };
+
 
   // Set initial form values
   React.useEffect(() => {
@@ -255,6 +312,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
       form.setFieldsValue({
         name: referenceData.name,
         category: referenceData.category,
+        region: referenceData.region,
         domain: referenceData.domain,
         vintage: referenceData.vintage,
       });
@@ -262,6 +320,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
       form.setFieldsValue({
         name: "",
         category: undefined,
+        region: undefined,
         domain: "",
         vintage: new Date().getFullYear(),
       });
@@ -329,6 +388,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
         initialValues={{
           name: "",
           category: undefined,
+          region: undefined,
           domain: "",
           vintage: new Date().getFullYear(),
         }}
@@ -385,6 +445,60 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
                         Add
                       </Button>
                       <Button size="small" onClick={handleCancelAddCategory}>
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          />
+        </Form.Item>
+
+        <Form.Item
+          label="Region"
+          name="region"
+        >
+          <Select
+            placeholder="Select region"
+            allowClear
+            showSearch
+            options={regions?.map((region: string) => ({ value: region, label: region }))}
+            filterOption={(input, option) =>
+              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+            }
+            popupRender={(menu) => (
+              <div>
+                {menu}
+                <div style={{ borderTop: '1px solid #f0f0f0', padding: '8px' }}>
+                  {!isAddingRegion ? (
+                    <Button
+                      type="text"
+                      icon={<PlusOutlined />}
+                      onClick={() => setIsAddingRegion(true)}
+                      style={{ width: '100%', textAlign: 'left' }}
+                    >
+                      Add new region
+                    </Button>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <Input
+                        placeholder="Region name"
+                        value={newRegionName}
+                        onChange={(e) => setNewRegionName(e.target.value)}
+                        onPressEnter={handleAddRegion}
+                        style={{ flex: 1 }}
+                        autoFocus
+                      />
+                      <Button 
+                        type="primary" 
+                        size="small" 
+                        onClick={handleAddRegion}
+                        loading={createRegionMutation.isPending}
+                      >
+                        Add
+                      </Button>
+                      <Button size="small" onClick={handleCancelAddRegion}>
                         Cancel
                       </Button>
                     </div>

@@ -40,6 +40,7 @@ export type Reference = {
   sqid: string;
   name: string;
   category?: string;
+  region?: string;
   domain?: string;
   vintage?: number;
   purchases: Purchase[];
@@ -71,6 +72,7 @@ function ReferenceTable() {
   const [selectedReference, setSelectedReference] = React.useState<Reference | null>(null);
   const [isExportModalOpen, setIsExportModalOpen] = React.useState(false);
   const [categoryOrder, setCategoryOrder] = React.useState<string[]>([]);
+  const [menuStructure, setMenuStructure] = React.useState<any[]>([]);
   const queryClient = useQueryClient();
 
   const handleSearchChange = React.useCallback((value: string) => {
@@ -138,12 +140,27 @@ function ReferenceTable() {
       fetch('http://localhost:8000/api/categories').then(res => res.json()),
   });
 
+  // Fetch menu structure for nested ordering
+  const { data: menuStructureData } = useQuery({
+    queryKey: ["menuStructure"],
+    queryFn: () => 
+      fetch('http://localhost:8000/api/menu/structure').then(res => res.json()),
+    enabled: isExportModalOpen,
+  });
+
   // Set category order from server data (already ordered by server)
   React.useEffect(() => {
     if (categories) {
       setCategoryOrder([...categories]);
     }
   }, [categories]);
+
+  // Set menu structure from server data
+  React.useEffect(() => {
+    if (menuStructureData?.structure) {
+      setMenuStructure([...menuStructureData.structure]);
+    }
+  }, [menuStructureData]);
 
   // Save category order to server
   const saveCategoryOrderMutation = useMutation({
@@ -155,6 +172,20 @@ function ReferenceTable() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
+    },
+  });
+
+  // Save nested menu order to server
+  const saveMenuOrderMutation = useMutation({
+    mutationFn: (newStructure: any[]) =>
+      fetch('http://localhost:8000/api/menu/order', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: newStructure }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['menuStructure'] });
     },
   });
 
@@ -170,6 +201,15 @@ function ReferenceTable() {
     newOrder.splice(toIndex, 0, removed);
     saveCategoryOrder(newOrder);
   }, [categoryOrder, saveCategoryOrder]);
+
+  // Handle drag end for nested menu reordering
+  const handleMenuDragEnd = React.useCallback((fromIndex: number, toIndex: number) => {
+    const newStructure = [...menuStructure];
+    const [removed] = newStructure.splice(fromIndex, 1);
+    newStructure.splice(toIndex, 0, removed);
+    setMenuStructure(newStructure);
+    saveMenuOrderMutation.mutate(newStructure);
+  }, [menuStructure, saveMenuOrderMutation]);
 
   const columns: ColumnsType<Reference> = [
     {
@@ -188,6 +228,17 @@ function ReferenceTable() {
         return aVal.toLowerCase().localeCompare(bVal.toLowerCase());
       },
       render: (category) => category || "-",
+    },
+    {
+      title: "Region",
+      dataIndex: "region",
+      key: "region",
+      sorter: (a, b) => {
+        const aVal = a.region || "";
+        const bVal = b.region || "";
+        return aVal.toLowerCase().localeCompare(bVal.toLowerCase());
+      },
+      render: (region) => region || "-",
     },
     {
       title: "Domain",
@@ -295,16 +346,16 @@ function ReferenceTable() {
         width={600}
       >
         <div style={{ marginBottom: '16px' }}>
-          <Typography.Text strong>Category Order</Typography.Text>
+          <Typography.Text strong>Menu Structure</Typography.Text>
           <Typography.Paragraph type="secondary" style={{ marginTop: '4px' }}>
-            Drag categories to reorder them. This order will be used for export and will persist.
+            Drag categories and regions to reorder them. Categories contain regions, and both affect the export order.
           </Typography.Paragraph>
         </div>
         
         <Card size="small">
-          {categoryOrder.map((category, index) => (
+          {menuStructure.map((item, index) => (
             <div
-              key={category}
+              key={`${item.type}-${item.name}-${item.parent || ''}`}
               draggable
               onDragStart={(e) => {
                 e.dataTransfer.setData('text/plain', index.toString());
@@ -315,12 +366,13 @@ function ReferenceTable() {
               onDrop={(e) => {
                 e.preventDefault();
                 const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-                handleCategoryDragEnd(fromIndex, index);
+                handleMenuDragEnd(fromIndex, index);
               }}
               style={{
                 padding: '8px 12px',
                 margin: '4px 0',
-                backgroundColor: '#f9f9f9',
+                marginLeft: item.type === 'region' ? '20px' : '0px',
+                backgroundColor: item.type === 'category' ? '#f9f9f9' : '#f0f8ff',
                 border: '1px solid #d9d9d9',
                 borderRadius: '4px',
                 cursor: 'move',
@@ -330,11 +382,17 @@ function ReferenceTable() {
               }}
             >
               <HolderOutlined style={{ color: '#999' }} />
-              {category || 'Uncategorized'}
+              {item.type === 'category' ? (
+                <strong>{item.name}</strong>
+              ) : (
+                <span style={{ fontStyle: 'italic', color: '#666' }}>
+                  {item.name} <small>(in {item.parent})</small>
+                </span>
+              )}
             </div>
           ))}
-          {categoryOrder.length === 0 && (
-            <Typography.Text type="secondary">No categories found</Typography.Text>
+          {menuStructure.length === 0 && (
+            <Typography.Text type="secondary">Loading menu structure...</Typography.Text>
           )}
         </Card>
       </Modal>

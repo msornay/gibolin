@@ -13,10 +13,25 @@ class Category(models.Model):
         return self.name
 
 
+class Region(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    order = models.IntegerField(default=0)
+
+    class Meta:
+        verbose_name_plural = "regions"
+        ordering = ["order", "name"]
+
+    def __str__(self):
+        return self.name
+
+
 class Reference(models.Model):
     name = models.CharField(max_length=255)
     category = models.ForeignKey(
         Category, on_delete=models.SET_NULL, null=True, blank=True, related_name="references"
+    )
+    region = models.ForeignKey(
+        Region, on_delete=models.SET_NULL, null=True, blank=True, related_name="references"
     )
     domain = models.CharField(max_length=255, null=True, blank=True)
     vintage = models.IntegerField(null=True, blank=True)
