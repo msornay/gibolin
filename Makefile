@@ -7,10 +7,10 @@ lint:
 test: test-api test-ui
 
 test-api:
-	docker-compose run api python manage.py test cave.tests
+	docker-compose run --rm api python manage.py test cave.tests
 
 test-ui:
-	docker-compose run ui npm run test:run
+	docker-compose run --rm ui npm run test:run
 
 reset:
 	docker-compose down -v --remove-orphans
