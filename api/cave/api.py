@@ -2,7 +2,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from django.contrib.postgres.search import SearchVector
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 
 import ninja
@@ -224,3 +224,185 @@ def delete_purchase(request, purchase_id: int):
     purchase = get_object_or_404(Purchase, id=purchase_id)
     purchase.delete()
     return {}
+
+
+@api.get("/export/html")
+def export_wine_menu_html(request):
+    """Generate HTML wine menu for printing"""
+    
+    # Get all references with their categories
+    references = Reference.objects.select_related('category').all()
+    
+    # Get categories in order
+    categories = Category.objects.all()
+    
+    # Group references by category
+    category_groups = {}
+    for category in categories:
+        category_groups[category.name] = []
+    
+    # Add uncategorized group
+    category_groups['Other Selections'] = []
+    
+    # Group references
+    for ref in references:
+        if ref.category:
+            category_groups[ref.category.name].append(ref)
+        else:
+            category_groups['Other Selections'].append(ref)
+    
+    # Sort references within each category
+    for category_refs in category_groups.values():
+        category_refs.sort(key=lambda x: x.name or '')
+    
+    # Generate HTML
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Wine Menu</title>
+        <meta charset="UTF-8">
+        <style>
+            @media print {{
+                @page {{
+                    size: A4;
+                    margin: 20mm 15mm;
+                }}
+                
+                body {{
+                    font-family: 'Times New Roman', serif;
+                    font-size: 12pt;
+                    line-height: 1.4;
+                    color: black;
+                    margin: 0;
+                    padding: 0;
+                }}
+                
+                .page-break {{
+                    page-break-before: always;
+                }}
+                
+                .page-break-avoid {{
+                    page-break-inside: avoid;
+                }}
+            }}
+            
+            @media screen {{
+                body {{
+                    font-family: 'Times New Roman', serif;
+                    font-size: 12pt;
+                    line-height: 1.4;
+                    color: black;
+                    max-width: 800px;
+                    margin: 20px auto;
+                    padding: 20px;
+                }}
+            }}
+            
+            .header {{
+                text-align: center;
+                margin-bottom: 30px;
+                border-bottom: 2px solid #000;
+                padding-bottom: 15px;
+            }}
+            
+            .logo {{
+                font-size: 24pt;
+                margin-bottom: 10px;
+            }}
+            
+            .restaurant-name {{
+                font-size: 28pt;
+                font-weight: bold;
+                margin: 10px 0;
+            }}
+            
+            .restaurant-subtitle {{
+                font-size: 16pt;
+                color: #666;
+                margin: 5px 0;
+            }}
+            
+            .menu-title {{
+                font-size: 22pt;
+                font-weight: bold;
+                margin: 15px 0;
+            }}
+            
+            .category {{
+                margin-bottom: 30px;
+                page-break-inside: avoid;
+            }}
+            
+            .category-title {{
+                font-size: 18pt;
+                font-weight: bold;
+                margin: 20px 0 15px 0;
+                padding: 8px 0;
+                border-bottom: 1px solid #ccc;
+            }}
+            
+            .wine-item {{
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                margin-bottom: 10px;
+                page-break-inside: avoid;
+            }}
+            
+            .wine-details {{
+                flex: 1;
+                padding-right: 20px;
+                font-weight: bold;
+            }}
+            
+            .wine-price {{
+                font-weight: bold;
+                white-space: nowrap;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="logo">🍷</div>
+            <div class="restaurant-name">Château de la Maison</div>
+            <div class="restaurant-subtitle">Fine Dining • Wine Selection</div>
+            <div class="menu-title">Wine Menu</div>
+        </div>
+    """
+    
+    # Add categories and wines
+    for category_name, category_refs in category_groups.items():
+        if not category_refs:
+            continue
+            
+        html_content += f'<div class="category">'
+        html_content += f'<div class="category-title">{category_name}</div>'
+        
+        for ref in category_refs:
+            # Build wine details text
+            wine_text = ref.name or 'Unknown Wine'
+            details = []
+            if ref.domain:
+                details.append(ref.domain)
+            if ref.vintage:
+                details.append(str(ref.vintage))
+            
+            if details:
+                wine_text += f" - {' • '.join(details)}"
+            
+            html_content += f'''
+            <div class="wine-item">
+                <div class="wine-details">{wine_text}</div>
+                <div class="wine-price">€0</div>
+            </div>
+            '''
+        
+        html_content += '</div>'
+    
+    html_content += """
+    </body>
+    </html>
+    """
+    
+    return HttpResponse(html_content, content_type='text/html')

@@ -100,6 +100,24 @@ function ReferenceTable() {
     setIsExportModalOpen(false);
   }, []);
 
+  const handleHtmlExport = React.useCallback(() => {
+    // Open HTML export in new window for printing
+    const exportUrl = 'http://localhost:8000/api/export/html';
+    const printWindow = window.open(exportUrl, '_blank');
+    
+    if (printWindow) {
+      // Wait for content to load, then trigger print dialog
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+        }, 500);
+      };
+    }
+    
+    // Close the modal
+    setIsExportModalOpen(false);
+  }, []);
+
   // Debounce search to prevent excessive API calls
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -270,8 +288,8 @@ function ReferenceTable() {
           <Button key="cancel" onClick={handleExportModalClose}>
             Cancel
           </Button>,
-          <Button key="export" type="primary" onClick={handleExportModalClose}>
-            Export
+          <Button key="export" type="primary" onClick={handleHtmlExport}>
+            Print Menu
           </Button>,
         ]}
         width={600}

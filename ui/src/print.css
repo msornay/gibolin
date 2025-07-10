@@ -1,0 +1,271 @@
+/* Print-specific styles */
+@media print {
+  /* Page setup */
+  @page {
+    size: A4;
+    margin: 20mm 15mm;
+  }
+
+  /* Hide non-printable elements */
+  .no-print,
+  button,
+  .ant-btn,
+  .ant-modal,
+  .ant-input,
+  nav,
+  .print-hide {
+    display: none !important;
+  }
+
+  /* Print container */
+  .print-content {
+    display: block !important;
+    position: relative;
+    width: 100%;
+    background: white;
+    color: black;
+    font-family: 'Times New Roman', serif;
+    font-size: 12pt;
+    line-height: 1.4;
+  }
+
+  /* Page breaks */
+  .page-break {
+    page-break-before: always;
+  }
+
+  .page-break-avoid {
+    page-break-inside: avoid;
+  }
+
+  /* Header */
+  .print-header {
+    text-align: center;
+    margin-bottom: 30px;
+    border-bottom: 2px solid #000;
+    padding-bottom: 15px;
+  }
+
+  .print-header h1 {
+    font-size: 24pt;
+    font-weight: bold;
+    margin: 0 0 10px 0;
+    color: black;
+  }
+
+  .print-header .subtitle {
+    font-size: 14pt;
+    color: #666;
+    margin: 5px 0;
+  }
+
+  /* Category sections */
+  .category-section {
+    margin-bottom: 40px;
+    page-break-inside: avoid;
+  }
+
+  .category-title {
+    font-size: 18pt;
+    font-weight: bold;
+    margin: 20px 0 15px 0;
+    padding: 8px 0;
+    border-bottom: 1px solid #ccc;
+    color: black;
+  }
+
+  /* Tables */
+  .print-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    font-size: 11pt;
+  }
+
+  .print-table th {
+    background-color: #f5f5f5;
+    border: 1px solid #000;
+    padding: 8px 6px;
+    text-align: left;
+    font-weight: bold;
+    font-size: 10pt;
+  }
+
+  .print-table td {
+    border: 1px solid #ccc;
+    padding: 6px;
+    vertical-align: top;
+  }
+
+  .print-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+
+  /* Purchase details */
+  .purchase-details {
+    font-size: 9pt;
+    color: #555;
+    margin-top: 3px;
+  }
+
+  .purchase-item {
+    margin-bottom: 2px;
+  }
+
+  /* Summary */
+  .print-summary {
+    margin-top: 30px;
+    padding: 15px;
+    border: 1px solid #000;
+    background-color: #f8f8f8;
+  }
+
+  .print-summary h3 {
+    margin: 0 0 10px 0;
+    font-size: 14pt;
+  }
+
+  /* Utilities */
+  .text-right {
+    text-align: right;
+  }
+
+  .text-center {
+    text-align: center;
+  }
+
+  .font-bold {
+    font-weight: bold;
+  }
+
+  .text-small {
+    font-size: 9pt;
+  }
+}
+
+/* Screen styles for print preview */
+.print-content {
+  display: none;
+}
+
+.print-content.preview-mode {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: white;
+  z-index: 9999;
+  overflow: auto;
+  padding: 20px;
+  font-family: 'Times New Roman', serif;
+  font-size: 12pt;
+  line-height: 1.4;
+  color: black;
+}
+
+.print-content.preview-mode .print-header {
+  text-align: center;
+  margin-bottom: 30px;
+  border-bottom: 2px solid #000;
+  padding-bottom: 15px;
+}
+
+.print-content.preview-mode .print-header h1 {
+  font-size: 24pt;
+  font-weight: bold;
+  margin: 0 0 10px 0;
+  color: black;
+}
+
+.print-content.preview-mode .print-header .subtitle {
+  font-size: 14pt;
+  color: #666;
+  margin: 5px 0;
+}
+
+.print-content.preview-mode .category-section {
+  margin-bottom: 40px;
+}
+
+.print-content.preview-mode .category-title {
+  font-size: 18pt;
+  font-weight: bold;
+  margin: 20px 0 15px 0;
+  padding: 8px 0;
+  border-bottom: 1px solid #ccc;
+  color: black;
+}
+
+.print-content.preview-mode .print-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  font-size: 11pt;
+}
+
+.print-content.preview-mode .print-table th {
+  background-color: #f5f5f5;
+  border: 1px solid #000;
+  padding: 8px 6px;
+  text-align: left;
+  font-weight: bold;
+  font-size: 10pt;
+}
+
+.print-content.preview-mode .print-table td {
+  border: 1px solid #ccc;
+  padding: 6px;
+  vertical-align: top;
+}
+
+.print-content.preview-mode .print-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.print-content.preview-mode .purchase-details {
+  font-size: 9pt;
+  color: #555;
+  margin-top: 3px;
+}
+
+.print-content.preview-mode .purchase-item {
+  margin-bottom: 2px;
+}
+
+.print-content.preview-mode .print-summary {
+  margin-top: 30px;
+  padding: 15px;
+  border: 1px solid #000;
+  background-color: #f8f8f8;
+}
+
+.print-content.preview-mode .print-summary h3 {
+  margin: 0 0 10px 0;
+  font-size: 14pt;
+}
+
+.print-content.preview-mode .text-right { text-align: right; }
+.print-content.preview-mode .text-center { text-align: center; }
+.print-content.preview-mode .font-bold { font-weight: bold; }
+.print-content.preview-mode .text-small { font-size: 9pt; }
+
+/* Close button for preview */
+.preview-close {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  padding: 10px 20px;
+  background: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.preview-close:hover {
+  background: #40a9ff;
+}
