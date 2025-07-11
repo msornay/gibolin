@@ -176,9 +176,9 @@ def list_reference(request, search: str = None):
         return Reference.objects.all()
 
     # keyword matching, but no phrase matching. doing both is not trivial.
-    return Reference.objects.annotate(search=SearchVector("name", "domain")).filter(
-        search__icontains=search
-    )
+    return Reference.objects.annotate(
+        search=SearchVector("name", "domain", "category__name", "region__name", "appellation__name")
+    ).filter(search__icontains=search)
 
 
 @api.get("/categories", response=List[str])

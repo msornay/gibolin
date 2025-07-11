@@ -57,11 +57,12 @@ export type RefsResponse = {
 
 // API Functions
 const fetchReferences = async (
-  page = 0,
+  page = 1,
   search = "",
+  limit = 20,
 ): Promise<RefsResponse> => {
   const response = await fetch(
-    `http://localhost:8000/api/refs?page=${page}${
+    `http://localhost:8000/api/refs?offset=${(page - 1) * limit}&limit=${limit}${
       search ? `&search=${search}` : ""
     }`,
   );
@@ -72,6 +73,8 @@ const fetchReferences = async (
 function ReferenceTable() {
   const [search, setSearch] = React.useState<string>("");
   const [debouncedSearch, setDebouncedSearch] = React.useState<string>("");
+  const [currentPage, setCurrentPage] = React.useState<number>(1);
+  const [pageSize, setPageSize] = React.useState<number>(20);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [selectedReference, setSelectedReference] = React.useState<Reference | null>(null);
   const [isExportModalOpen, setIsExportModalOpen] = React.useState(false);
@@ -84,6 +87,7 @@ function ReferenceTable() {
 
   const handleSearchChange = React.useCallback((value: string) => {
     setSearch(value);
+    setCurrentPage(1); // Reset to first page when searching
   }, []);
 
   const handleNewReference = React.useCallback(() => {
@@ -136,8 +140,8 @@ function ReferenceTable() {
   }, [search]);
 
   const { isLoading, error, data } = useQuery({
-    queryKey: ["references", debouncedSearch],
-    queryFn: () => fetchReferences(0, debouncedSearch),
+    queryKey: ["references", debouncedSearch, currentPage, pageSize],
+    queryFn: () => fetchReferences(currentPage, debouncedSearch, pageSize),
   });
 
   // Fetch categories
@@ -435,7 +439,27 @@ function ReferenceTable() {
         dataSource={data?.items || []}
         loading={isLoading}
         rowKey="sqid"
-        pagination={false}
+        pagination={{
+          current: currentPage,
+          pageSize: pageSize,
+          total: data?.count || 0,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total, range) =>
+            `${range[0]}-${range[1]} of ${total} references`,
+          onChange: (page, size) => {
+            setCurrentPage(page);
+            if (size !== pageSize) {
+              setPageSize(size);
+              setCurrentPage(1);
+            }
+          },
+          onShowSizeChange: (current, size) => {
+            setPageSize(size);
+            setCurrentPage(1);
+          },
+          pageSizeOptions: ['10', '20', '50', '100'],
+        }}
         size="small"
       />
 
