@@ -1,4 +1,4 @@
-.PHONY: test test-api test-ui
+.PHONY: test test-api test-ui seed-db reset-with-data
 
 lint:
 	docker-compose run --rm api ruff check
@@ -12,5 +12,14 @@ test-api:
 test-ui:
 	docker-compose run --rm ui npm run test:run
 
+seed-db:
+	docker-compose run --rm api python manage.py load_test_data --clear
+
 reset:
 	docker-compose down -v --remove-orphans
+
+reset-with-data: reset
+	docker-compose up -d postgres
+	sleep 5
+	docker-compose run --rm api python manage.py migrate
+	docker-compose run --rm api python manage.py load_test_data --clear
