@@ -18,7 +18,8 @@ import {
   Typography,
   App as AntApp,
   List,
-  Card
+  Card,
+  InputNumber
 } from "antd";
 import { EditOutlined, PlusOutlined, ExportOutlined, HolderOutlined } from "@ant-design/icons";
 import { SketchPicker } from "react-color";
@@ -44,6 +45,7 @@ export type Reference = {
   region?: string;
   domain?: string;
   vintage?: number;
+  current_quantity: number;
   purchases: Purchase[];
 };
 
@@ -75,6 +77,8 @@ function ReferenceTable() {
   const [categoryOrder, setCategoryOrder] = React.useState<string[]>([]);
   const [menuStructure, setMenuStructure] = React.useState<any[]>([]);
   const [colorPickerOpen, setColorPickerOpen] = React.useState<string | null>(null);
+  const [editingQuantity, setEditingQuantity] = React.useState<string | null>(null);
+  const [quantityValue, setQuantityValue] = React.useState<number>(0);
   const queryClient = useQueryClient();
 
   const handleSearchChange = React.useCallback((value: string) => {
@@ -204,6 +208,20 @@ function ReferenceTable() {
     },
   });
 
+  // Update reference quantity
+  const updateQuantityMutation = useMutation({
+    mutationFn: ({ sqid, quantity }: { sqid: string; quantity: number }) =>
+      fetch(`http://localhost:8000/api/ref/${sqid}/quantity`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['references'] });
+      setEditingQuantity(null);
+    },
+  });
+
   const saveCategoryOrder = React.useCallback((newOrder: string[]) => {
     setCategoryOrder(newOrder);
     saveCategoryOrderMutation.mutate(newOrder);
@@ -239,6 +257,29 @@ function ReferenceTable() {
     // Save to server
     saveCategoryColorMutation.mutate({ name: categoryName, color });
   }, [menuStructure, saveCategoryColorMutation]);
+
+  // Handle quantity editing
+  const handleQuantityEdit = React.useCallback((sqid: string, currentQuantity: number) => {
+    setEditingQuantity(sqid);
+    setQuantityValue(currentQuantity);
+  }, []);
+
+  const handleQuantitySave = React.useCallback((sqid: string) => {
+    updateQuantityMutation.mutate({ sqid, quantity: quantityValue });
+  }, [quantityValue, updateQuantityMutation]);
+
+  const handleQuantityCancel = React.useCallback(() => {
+    setEditingQuantity(null);
+    setQuantityValue(0);
+  }, []);
+
+  const handleQuantityKeyPress = React.useCallback((e: React.KeyboardEvent, sqid: string) => {
+    if (e.key === 'Enter') {
+      handleQuantitySave(sqid);
+    } else if (e.key === 'Escape') {
+      handleQuantityCancel();
+    }
+  }, [handleQuantitySave, handleQuantityCancel]);
 
   const columns: ColumnsType<Reference> = [
     {
@@ -291,11 +332,51 @@ function ReferenceTable() {
       title: "Actions",
       key: "actions",
       render: (_, record) => (
-        <Button
-          type="text"
-          icon={<EditOutlined />}
-          onClick={() => handleEditReference(record)}
-        />
+        <Space>
+          {editingQuantity === record.sqid ? (
+            <Space>
+              <InputNumber
+                value={quantityValue}
+                onChange={(value) => setQuantityValue(value || 0)}
+                onKeyDown={(e) => handleQuantityKeyPress(e, record.sqid)}
+                min={0}
+                size="small"
+                style={{ width: 80 }}
+                placeholder="Qty"
+                autoFocus
+              />
+              <Button
+                size="small"
+                type="primary"
+                onClick={() => handleQuantitySave(record.sqid)}
+                loading={updateQuantityMutation.isPending}
+              >
+                Save
+              </Button>
+              <Button
+                size="small"
+                onClick={handleQuantityCancel}
+              >
+                Cancel
+              </Button>
+            </Space>
+          ) : (
+            <Space>
+              <Button
+                size="small"
+                onClick={() => handleQuantityEdit(record.sqid, record.current_quantity)}
+                title={`Current quantity: ${record.current_quantity}`}
+              >
+                {record.current_quantity}
+              </Button>
+              <Button
+                type="text"
+                icon={<EditOutlined />}
+                onClick={() => handleEditReference(record)}
+              />
+            </Space>
+          )}
+        </Space>
       ),
     },
   ];

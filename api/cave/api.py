@@ -41,6 +41,7 @@ class ReferenceIn(ninja.Schema):
 
     domain: Optional[str]
     vintage: Optional[int]
+    current_quantity: Optional[int] = 0
 
     class Config:
         extra = "forbid"  # XXX(msy) to test
@@ -66,6 +67,7 @@ class ReferenceOut(ninja.Schema):
     region: Optional[str]
     domain: Optional[str]
     vintage: Optional[int]
+    current_quantity: int
     purchases: List[PurchaseOut]
 
     @staticmethod
@@ -261,6 +263,19 @@ def update_category_color(request, color_in: CategoryColorIn):
     """Update the color of a category"""
     Category.objects.filter(name=color_in.name).update(color=color_in.color)
     return {"success": True}
+
+
+class QuantityUpdateIn(ninja.Schema):
+    quantity: int
+
+
+@api.put("/ref/{sqid}/quantity")
+def update_reference_quantity(request, sqid: str, quantity_in: QuantityUpdateIn):
+    """Update the current quantity of a reference"""
+    reference = get_object_or_404(Reference, id=sqid_decode(sqid))
+    reference.current_quantity = quantity_in.quantity
+    reference.save()
+    return {"success": True, "quantity": reference.current_quantity}
 
 
 @api.get("/menu/structure")

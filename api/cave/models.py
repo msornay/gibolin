@@ -36,6 +36,7 @@ class Reference(models.Model):
     )
     domain = models.CharField(max_length=255, null=True, blank=True)
     vintage = models.IntegerField(null=True, blank=True)
+    current_quantity = models.IntegerField(default=0)
 
     class Meta:
         ordering = ["name"]
