@@ -5,27 +5,40 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('cave', '0006_reference_current_quantity'),
+        ("cave", "0006_reference_current_quantity"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Appellation',
+            name="Appellation",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255, unique=True)),
-                ('order', models.IntegerField(default=0)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255, unique=True)),
+                ("order", models.IntegerField(default=0)),
             ],
             options={
-                'verbose_name_plural': 'appellations',
-                'ordering': ['order', 'name'],
+                "verbose_name_plural": "appellations",
+                "ordering": ["order", "name"],
             },
         ),
         migrations.AddField(
-            model_name='reference',
-            name='appellation',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='references', to='cave.appellation'),
+            model_name="reference",
+            name="appellation",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="references",
+                to="cave.appellation",
+            ),
         ),
     ]

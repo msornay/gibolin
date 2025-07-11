@@ -5,40 +5,53 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('cave', '0001_initial'),
+        ("cave", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Category',
+            name="Category",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255, unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255, unique=True)),
             ],
             options={
-                'verbose_name_plural': 'categories',
-                'ordering': ['name'],
+                "verbose_name_plural": "categories",
+                "ordering": ["name"],
             },
         ),
         migrations.AlterModelOptions(
-            name='reference',
-            options={'ordering': ['name']},
+            name="reference",
+            options={"ordering": ["name"]},
         ),
         migrations.AlterField(
-            model_name='reference',
-            name='domain',
+            model_name="reference",
+            name="domain",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='reference',
-            name='vintage',
+            model_name="reference",
+            name="vintage",
             field=models.IntegerField(blank=True, null=True),
         ),
         migrations.AlterField(
-            model_name='reference',
-            name='category',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='references', to='cave.category'),
+            model_name="reference",
+            name="category",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="references",
+                to="cave.category",
+            ),
         ),
     ]

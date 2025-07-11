@@ -4,19 +4,21 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('cave', '0002_category_alter_reference_options_and_more'),
+        ("cave", "0002_category_alter_reference_options_and_more"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='category',
-            options={'ordering': ['order', 'name'], 'verbose_name_plural': 'categories'},
+            name="category",
+            options={
+                "ordering": ["order", "name"],
+                "verbose_name_plural": "categories",
+            },
         ),
         migrations.AddField(
-            model_name='category',
-            name='order',
+            model_name="category",
+            name="order",
             field=models.IntegerField(default=0),
         ),
     ]

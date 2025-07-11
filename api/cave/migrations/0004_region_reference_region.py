@@ -5,27 +5,40 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('cave', '0003_alter_category_options_category_order'),
+        ("cave", "0003_alter_category_options_category_order"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Region',
+            name="Region",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255, unique=True)),
-                ('order', models.IntegerField(default=0)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255, unique=True)),
+                ("order", models.IntegerField(default=0)),
             ],
             options={
-                'verbose_name_plural': 'regions',
-                'ordering': ['order', 'name'],
+                "verbose_name_plural": "regions",
+                "ordering": ["order", "name"],
             },
         ),
         migrations.AddField(
-            model_name='reference',
-            name='region',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='references', to='cave.region'),
+            model_name="reference",
+            name="region",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="references",
+                to="cave.region",
+            ),
         ),
     ]

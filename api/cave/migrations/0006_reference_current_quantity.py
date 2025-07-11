@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('cave', '0005_category_color'),
+        ("cave", "0005_category_color"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='reference',
-            name='current_quantity',
+            model_name="reference",
+            name="current_quantity",
             field=models.IntegerField(default=0),
         ),
     ]
