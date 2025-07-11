@@ -43,6 +43,7 @@ export type Reference = {
   name: string;
   category?: string;
   region?: string;
+  appellation?: string;
   domain?: string;
   vintage?: number;
   current_quantity: number;
@@ -329,6 +330,17 @@ function ReferenceTable() {
       render: (vintage) => vintage || "-",
     },
     {
+      title: "Appellation",
+      dataIndex: "appellation",
+      key: "appellation",
+      sorter: (a, b) => {
+        const aVal = a.appellation || "";
+        const bVal = b.appellation || "";
+        return aVal.toLowerCase().localeCompare(bVal.toLowerCase());
+      },
+      render: (appellation) => appellation || "-",
+    },
+    {
       title: "Actions",
       key: "actions",
       render: (_, record) => (
@@ -458,7 +470,7 @@ function ReferenceTable() {
         <div style={{ marginBottom: '16px' }}>
           <Typography.Text strong>Menu Structure</Typography.Text>
           <Typography.Paragraph type="secondary" style={{ marginTop: '4px' }}>
-            Drag categories and regions to reorder them. Categories contain regions, and both affect the export order.
+            Drag categories, regions, and appellations to reorder them. Categories contain regions, which contain appellations.
           </Typography.Paragraph>
         </div>
         
@@ -481,8 +493,8 @@ function ReferenceTable() {
               style={{
                 padding: '8px 12px',
                 margin: '4px 0',
-                marginLeft: item.type === 'region' ? '20px' : '0px',
-                backgroundColor: item.type === 'category' ? '#f9f9f9' : '#f0f8ff',
+                marginLeft: item.type === 'region' ? '20px' : item.type === 'appellation' ? '40px' : '0px',
+                backgroundColor: item.type === 'category' ? '#f9f9f9' : item.type === 'region' ? '#f0f8ff' : '#f5f5f5',
                 border: '1px solid #d9d9d9',
                 borderRadius: '4px',
                 cursor: 'move',
@@ -533,8 +545,12 @@ function ReferenceTable() {
                     )}
                   </div>
                 </div>
-              ) : (
+              ) : item.type === 'region' ? (
                 <span style={{ fontStyle: 'italic', color: '#666' }}>
+                  {item.name} <small>(in {item.parent})</small>
+                </span>
+              ) : (
+                <span style={{ fontStyle: 'italic', color: '#999', fontSize: '0.9em' }}>
                   {item.name} <small>(in {item.parent})</small>
                 </span>
               )}

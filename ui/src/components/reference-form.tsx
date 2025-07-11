@@ -42,6 +42,8 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   const [isAddingCategory, setIsAddingCategory] = React.useState(false);
   const [newRegionName, setNewRegionName] = React.useState("");
   const [isAddingRegion, setIsAddingRegion] = React.useState(false);
+  const [newAppellationName, setNewAppellationName] = React.useState("");
+  const [isAddingAppellation, setIsAddingAppellation] = React.useState(false);
 
   // Fetch categories
   const { data: categories, refetch: refetchCategories } = useQuery({
@@ -55,6 +57,13 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
     queryKey: ['regions'],
     queryFn: () => 
       fetch('http://localhost:8000/api/regions').then(res => res.json()),
+  });
+
+  // Fetch appellations
+  const { data: appellations, refetch: refetchAppellations } = useQuery({
+    queryKey: ['appellations'],
+    queryFn: () => 
+      fetch('http://localhost:8000/api/appellations').then(res => res.json()),
   });
 
 
@@ -81,9 +90,11 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
       queryClient.invalidateQueries({ queryKey: ["references"] });
       queryClient.invalidateQueries({ queryKey: ["categories"] });
       queryClient.invalidateQueries({ queryKey: ["regions"] });
+      queryClient.invalidateQueries({ queryKey: ["appellations"] });
       queryClient.invalidateQueries({ queryKey: ["reference", reference?.sqid] });
       refetchCategories(); // Force refetch categories
       refetchRegions(); // Force refetch regions
+      refetchAppellations(); // Force refetch appellations
       messageApi.success("Reference updated successfully");
       onClose();
     },
@@ -126,6 +137,23 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
     },
   });
 
+  // Create appellation mutation
+  const createAppellationMutation = useMutation({
+    mutationFn: (appellationName: string) =>
+      fetch(`http://localhost:8000/api/appellations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: appellationName }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appellations"] });
+      messageApi.success("Appellation created successfully");
+    },
+    onError: () => {
+      messageApi.error("Failed to create appellation");
+    },
+  });
+
   // Create reference mutation
   const createMutation = useMutation({
     mutationFn: (values: any) =>
@@ -138,8 +166,10 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
       queryClient.invalidateQueries({ queryKey: ["references"] });
       queryClient.invalidateQueries({ queryKey: ["categories"] });
       queryClient.invalidateQueries({ queryKey: ["regions"] });
+      queryClient.invalidateQueries({ queryKey: ["appellations"] });
       refetchCategories();
       refetchRegions();
+      refetchAppellations();
       messageApi.success("Reference created successfully");
       onClose();
     },
@@ -305,6 +335,33 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
     setIsAddingRegion(false);
   };
 
+  // Handle new appellation creation
+  const handleAddAppellation = () => {
+    if (newAppellationName.trim()) {
+      const trimmedName = newAppellationName.trim();
+      
+      // Check if appellation already exists
+      if (appellations?.includes(trimmedName)) {
+        messageApi.warning("Appellation already exists");
+        return;
+      }
+      
+      // Create appellation server-side
+      createAppellationMutation.mutate(trimmedName, {
+        onSuccess: () => {
+          form.setFieldsValue({ appellation: trimmedName });
+          setNewAppellationName("");
+          setIsAddingAppellation(false);
+        }
+      });
+    }
+  };
+
+  const handleCancelAddAppellation = () => {
+    setNewAppellationName("");
+    setIsAddingAppellation(false);
+  };
+
 
   // Set initial form values
   React.useEffect(() => {
@@ -313,6 +370,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
         name: referenceData.name,
         category: referenceData.category,
         region: referenceData.region,
+        appellation: referenceData.appellation,
         domain: referenceData.domain,
         vintage: referenceData.vintage,
       });
@@ -321,6 +379,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
         name: "",
         category: undefined,
         region: undefined,
+        appellation: undefined,
         domain: "",
         vintage: new Date().getFullYear(),
       });
@@ -389,6 +448,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
           name: "",
           category: undefined,
           region: undefined,
+          appellation: undefined,
           domain: "",
           vintage: new Date().getFullYear(),
         }}
@@ -499,6 +559,60 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
                         Add
                       </Button>
                       <Button size="small" onClick={handleCancelAddRegion}>
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          />
+        </Form.Item>
+
+        <Form.Item
+          label="Appellation"
+          name="appellation"
+        >
+          <Select
+            placeholder="Select appellation"
+            allowClear
+            showSearch
+            options={appellations?.map((appellation: string) => ({ value: appellation, label: appellation }))}
+            filterOption={(input, option) =>
+              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+            }
+            popupRender={(menu) => (
+              <div>
+                {menu}
+                <div style={{ borderTop: '1px solid #f0f0f0', padding: '8px' }}>
+                  {!isAddingAppellation ? (
+                    <Button
+                      type="text"
+                      icon={<PlusOutlined />}
+                      onClick={() => setIsAddingAppellation(true)}
+                      style={{ width: '100%', textAlign: 'left' }}
+                    >
+                      Add new appellation
+                    </Button>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <Input
+                        placeholder="Appellation name"
+                        value={newAppellationName}
+                        onChange={(e) => setNewAppellationName(e.target.value)}
+                        onPressEnter={handleAddAppellation}
+                        style={{ flex: 1 }}
+                        autoFocus
+                      />
+                      <Button 
+                        type="primary" 
+                        size="small" 
+                        onClick={handleAddAppellation}
+                        loading={createAppellationMutation.isPending}
+                      >
+                        Add
+                      </Button>
+                      <Button size="small" onClick={handleCancelAddAppellation}>
                         Cancel
                       </Button>
                     </div>
