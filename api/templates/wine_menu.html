@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Wine Menu</title>
+    <meta charset="UTF-8">
+    <style>
+        @media print {
+            @page {
+                size: A4;
+                margin: 20mm 15mm;
+            }
+            
+            body {
+                font-family: 'Times New Roman', serif;
+                font-size: 12pt;
+                line-height: 1.4;
+                color: black;
+                margin: 0;
+                padding: 0;
+            }
+            
+            .page-break {
+                page-break-before: always;
+            }
+            
+            .page-break-avoid {
+                page-break-inside: avoid;
+            }
+        }
+        
+        @media screen {
+            body {
+                font-family: 'Times New Roman', serif;
+                font-size: 12pt;
+                line-height: 1.4;
+                color: black;
+                max-width: 800px;
+                margin: 20px auto;
+                padding: 20px;
+            }
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 15px;
+        }
+        
+        .logo {
+            font-size: 24pt;
+            margin-bottom: 10px;
+        }
+        
+        .restaurant-name {
+            font-size: 28pt;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .restaurant-subtitle {
+            font-size: 16pt;
+            color: #666;
+            margin: 5px 0;
+        }
+        
+        .menu-title {
+            font-size: 22pt;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        
+        .category {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+        }
+        
+        .category-title {
+            font-size: 18pt;
+            font-weight: bold;
+            margin: 20px 0 15px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #ccc;
+        }
+        
+        .region-title {
+            font-size: 14pt;
+            font-weight: bold;
+            margin: 15px 0 10px 0;
+            padding: 4px 0 4px 20px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .appellation-title {
+            font-size: 12pt;
+            font-weight: bold;
+            margin: 10px 0 8px 0;
+            padding: 3px 0 3px 40px;
+            color: #999;
+            font-style: italic;
+        }
+        
+        .wine-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 10px;
+            page-break-inside: avoid;
+        }
+        
+        .wine-details {
+            flex: 1;
+            padding-right: 20px;
+            font-weight: bold;
+        }
+        
+        .wine-price {
+            font-weight: bold;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">🍷</div>
+        <div class="restaurant-name">Château de la Maison</div>
+        <div class="restaurant-subtitle">Fine Dining • Wine Selection</div>
+        <div class="menu-title">Wine Menu</div>
+    </div>
+
+    {% for category in categories %}
+        {% if category.has_wines %}
+            <div class="category">
+                <div class="category-title" style="color: {{ category.color }};">{{ category.name }}</div>
+                
+                {% for region in category.regions %}
+                    {% if region.has_wines %}
+                        {% if region.name != 'No Region' %}
+                            <div class="region-title" style="color: {{ category.color }};">{{ region.name }}</div>
+                        {% endif %}
+                        
+                        {% for appellation in region.appellations %}
+                            {% if appellation.wines %}
+                                {% if appellation.name != 'No Appellation' %}
+                                    <div class="appellation-title" style="color: {{ category.color }};">{{ appellation.name }}</div>
+                                {% endif %}
+                                
+                                {% for wine in appellation.wines %}
+                                    <div class="wine-item">
+                                        <div class="wine-details">
+                                            {{ wine.name }}{% if wine.details %} - {{ wine.details }}{% endif %}
+                                        </div>
+                                        <div class="wine-price">€0</div>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endfor %}
+</body>
+</html>
