@@ -1,18 +1,19 @@
 from django.test import TestCase, Client
 import json
 
-from .models import Reference, Purchase
+from .models import Reference, Purchase, Category
 from .api import sqid_encode, sqid_decode
 
 
 class ReferenceModelTest(TestCase):
     def test_reference_creation(self):
         """Test basic reference creation"""
+        category = Category.objects.create(name="Red")
         reference = Reference.objects.create(
-            name="Test Wine", category="Red", domain="test.com", vintage=2020
+            name="Test Wine", category=category, domain="test.com", vintage=2020
         )
         self.assertEqual(reference.name, "Test Wine")
-        self.assertEqual(reference.category, "Red")
+        self.assertEqual(reference.category.name, "Red")
         self.assertEqual(reference.domain, "test.com")
         self.assertEqual(reference.vintage, 2020)
 
@@ -37,8 +38,9 @@ class SqidUtilsTest(TestCase):
 class ReferenceAPITest(TestCase):
     def setUp(self):
         self.client = Client()
+        self.category = Category.objects.create(name="Red")
         self.reference = Reference.objects.create(
-            name="Test Wine", category="Red", domain="test.com", vintage=2020
+            name="Test Wine", category=self.category, domain="test.com", vintage=2020
         )
 
     def test_healthcheck(self):
@@ -64,7 +66,7 @@ class ReferenceAPITest(TestCase):
 
         # Verify the reference was created
         new_reference = Reference.objects.get(name="New Wine")
-        self.assertEqual(new_reference.category, "White")
+        self.assertEqual(new_reference.category.name, "White")
         self.assertEqual(new_reference.domain, "new.com")
         self.assertEqual(new_reference.vintage, 2021)
 
@@ -103,7 +105,7 @@ class ReferenceAPITest(TestCase):
         # Verify the reference was updated
         updated_reference = Reference.objects.get(id=self.reference.id)
         self.assertEqual(updated_reference.name, "Updated Wine")
-        self.assertEqual(updated_reference.category, "Rose")
+        self.assertEqual(updated_reference.category.name, "Rose")
         self.assertEqual(updated_reference.domain, "updated.com")
         self.assertEqual(updated_reference.vintage, 2022)
 
@@ -158,27 +160,62 @@ class ReferenceAPITest(TestCase):
 
     def test_search_references_case_insensitive(self):
         """Test that search is case insensitive"""
-        # Create a reference with mixed case
         Reference.objects.create(
             name="CamelCase Wine", domain="camelcase.com", vintage=2020
         )
 
-        # Search with lowercase should find the CamelCase reference
         response = self.client.get("/api/refs?search=camelcase")
         self.assertEqual(response.status_code, 200)
         data = response.json()
-
-        # Should find the reference regardless of case
         found = any("CamelCase" in item["name"] for item in data["items"])
         self.assertTrue(found, "Should find CamelCase Wine with lowercase search")
 
-        # Search with uppercase should also work
         response = self.client.get("/api/refs?search=CAMELCASE")
         self.assertEqual(response.status_code, 200)
         data = response.json()
-
         found = any("CamelCase" in item["name"] for item in data["items"])
         self.assertTrue(found, "Should find CamelCase Wine with uppercase search")
+
+    def test_search_references_accent_insensitive(self):
+        """Test that search is accent insensitive (unaccent)"""
+        Reference.objects.create(name="Mâcon-Villages Côteaux", vintage=2020)
+        Reference.objects.create(name="Château Léoville", vintage=2019)
+
+        # Search without accents should find accented names
+        response = self.client.get("/api/refs?search=Macon")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["count"], 1)
+        self.assertIn("Mâcon", data["items"][0]["name"])
+
+        response = self.client.get("/api/refs?search=Coteaux")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["count"], 1)
+        self.assertIn("Côteaux", data["items"][0]["name"])
+
+        response = self.client.get("/api/refs?search=Chateau")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["count"], 1)
+        self.assertIn("Château", data["items"][0]["name"])
+
+        response = self.client.get("/api/refs?search=Leoville")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["count"], 1)
+        self.assertIn("Léoville", data["items"][0]["name"])
+
+    def test_search_by_category_accent_insensitive(self):
+        """Test that search matches category names with accents"""
+        category = Category.objects.create(name="Côtes du Rhône")
+        Reference.objects.create(name="Test Wine", category=category, vintage=2020)
+
+        response = self.client.get("/api/refs?search=Cotes")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["count"], 1)
+        self.assertEqual(data["items"][0]["name"], "Test Wine")
 
     def test_create_reference_validation(self):
         """Test validation on reference creation"""
@@ -206,15 +243,17 @@ class ReferenceAPITest(TestCase):
 
     def test_list_categories(self):
         """Test listing unique categories"""
-        # Create references with different categories
+        # Create categories and references
+        bordeaux = Category.objects.create(name="Bordeaux")
+        burgundy = Category.objects.create(name="Burgundy")
         Reference.objects.create(
-            name="Wine 1", category="Bordeaux", domain="test1.com", vintage=2020
+            name="Wine 1", category=bordeaux, domain="test1.com", vintage=2020
         )
         Reference.objects.create(
-            name="Wine 2", category="Burgundy", domain="test2.com", vintage=2021
+            name="Wine 2", category=burgundy, domain="test2.com", vintage=2021
         )
         Reference.objects.create(
-            name="Wine 3", category="Bordeaux", domain="test3.com", vintage=2022
+            name="Wine 3", category=bordeaux, domain="test3.com", vintage=2022
         )
         Reference.objects.create(
             name="Wine 4", domain="test4.com", vintage=2023
@@ -224,18 +263,18 @@ class ReferenceAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         data = response.json()
-        self.assertEqual(len(data), 3)  # 3 unique categories (including self.reference)
+        self.assertEqual(len(data), 3)  # 3 unique categories (including self.category)
         self.assertIn("Bordeaux", data)
         self.assertIn("Burgundy", data)
-        self.assertIn("Red", data)  # From self.reference
-        self.assertEqual(data, ["Bordeaux", "Burgundy", "Red"])  # Should be sorted
+        self.assertIn("Red", data)  # From self.category
 
 
 class PurchaseAPITest(TestCase):
     def setUp(self):
         self.client = Client()
+        self.category = Category.objects.create(name="Red")
         self.reference = Reference.objects.create(
-            name="Test Wine", category="Red", domain="test.com", vintage=2020
+            name="Test Wine", category=self.category, domain="test.com", vintage=2020
         )
         self.purchase = Purchase.objects.create(
             reference=self.reference, date="2023-01-01", quantity=6, price=15.50

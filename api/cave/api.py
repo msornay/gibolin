@@ -1,7 +1,7 @@
 from typing import List, Optional
 from datetime import datetime
 
-from django.contrib.postgres.search import SearchVector
+from django.db.models import Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
@@ -37,14 +37,11 @@ def status(request):
 
 class ReferenceIn(ninja.Schema):
     name: str
-    category: Optional[str]  # Will be category name, converted to Category object
-    region: Optional[str]  # Will be region name, converted to Region object
-    appellation: Optional[
-        str
-    ]  # Will be appellation name, converted to Appellation object
-
-    domain: Optional[str]
-    vintage: Optional[int]
+    category: Optional[str] = None
+    region: Optional[str] = None
+    appellation: Optional[str] = None
+    domain: Optional[str] = None
+    vintage: Optional[int] = None
     current_quantity: Optional[int] = 0
 
     class Config:
@@ -178,12 +175,13 @@ def list_reference(request, search: str = None):
     if not search:
         return Reference.objects.all()
 
-    # keyword matching, but no phrase matching. doing both is not trivial.
-    return Reference.objects.annotate(
-        search=SearchVector(
-            "name", "domain", "category__name", "region__name", "appellation__name"
-        )
-    ).filter(search__icontains=search)
+    return Reference.objects.filter(
+        Q(name__unaccent__icontains=search) |
+        Q(domain__unaccent__icontains=search) |
+        Q(category__name__unaccent__icontains=search) |
+        Q(region__name__unaccent__icontains=search) |
+        Q(appellation__name__unaccent__icontains=search)
+    ).distinct()
 
 
 @api.get("/categories", response=List[str])

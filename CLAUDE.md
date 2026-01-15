@@ -58,6 +58,12 @@ make reset-with-data
 - References use sqid-encoded IDs for public URLs
 - Categories, Regions, Appellations are lookup tables with ordering support
 
+### Search
+- Accent-insensitive search using PostgreSQL `unaccent` extension
+- Searches across: name, domain, category, region, appellation
+- Requires `django.contrib.postgres` in `INSTALLED_APPS`
+- Text search config `simple_unaccent` created in `postgres/init.sql`
+
 ## Planned: Offline Support (PWA)
 
 To support quantity updates in cellars with no signal, implement PWA with Service Worker:
