@@ -9,19 +9,20 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { 
-  Table, 
-  Input, 
-  Button, 
-  Modal, 
+import {
+  Table,
+  Input,
+  Button,
+  Modal,
   Space,
   Typography,
   App as AntApp,
   List,
   Card,
-  InputNumber
+  InputNumber,
+  Statistic
 } from "antd";
-import { EditOutlined, PlusOutlined, ExportOutlined, HolderOutlined } from "@ant-design/icons";
+import { EditOutlined, PlusOutlined, ExportOutlined, HolderOutlined, BarChartOutlined } from "@ant-design/icons";
 import { SketchPicker } from "react-color";
 import type { ColumnsType } from "antd/es/table";
 
@@ -78,6 +79,7 @@ function ReferenceTable() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [selectedReference, setSelectedReference] = React.useState<Reference | null>(null);
   const [isExportModalOpen, setIsExportModalOpen] = React.useState(false);
+  const [isStatsModalOpen, setIsStatsModalOpen] = React.useState(false);
   const [categoryOrder, setCategoryOrder] = React.useState<string[]>([]);
   const [menuStructure, setMenuStructure] = React.useState<any[]>([]);
   const [colorPickerOpen, setColorPickerOpen] = React.useState<string | null>(null);
@@ -154,9 +156,16 @@ function ReferenceTable() {
   // Fetch menu structure for nested ordering
   const { data: menuStructureData } = useQuery({
     queryKey: ["menuStructure"],
-    queryFn: () => 
+    queryFn: () =>
       fetch('http://localhost:8000/api/menu/structure').then(res => res.json()),
     enabled: isExportModalOpen,
+  });
+
+  // Fetch stats when modal opens
+  const { data: stats } = useQuery({
+    queryKey: ["stats"],
+    queryFn: () => fetch('http://localhost:8000/api/stats').then(res => res.json()),
+    enabled: isStatsModalOpen,
   });
 
   // Set category order from server data (already ordered by server)
@@ -409,12 +418,20 @@ function ReferenceTable() {
     <div style={{ padding: "20px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <Title level={2} style={{ margin: 0 }}>References</Title>
-        <Button
-          icon={<ExportOutlined />}
-          onClick={handleExport}
-        >
-          Export
-        </Button>
+        <Space>
+          <Button
+            icon={<BarChartOutlined />}
+            onClick={() => setIsStatsModalOpen(true)}
+          >
+            Stats
+          </Button>
+          <Button
+            icon={<ExportOutlined />}
+            onClick={handleExport}
+          >
+            Export
+          </Button>
+        </Space>
       </div>
       
       <Space style={{ marginBottom: "16px" }}>
@@ -584,6 +601,19 @@ function ReferenceTable() {
             <Typography.Text type="secondary">Loading menu structure...</Typography.Text>
           )}
         </Card>
+      </Modal>
+
+      <Modal
+        title="Cellar Statistics"
+        open={isStatsModalOpen}
+        onCancel={() => setIsStatsModalOpen(false)}
+        footer={<Button onClick={() => setIsStatsModalOpen(false)}>Close</Button>}
+      >
+        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+          <Statistic title="Total References" value={stats?.total_references || 0} />
+          <Statistic title="Total Bottles" value={stats?.total_bottles || 0} />
+          <Statistic title="Total Value" value={stats?.total_value || 0} prefix="€" precision={2} />
+        </Space>
       </Modal>
     </div>
   );

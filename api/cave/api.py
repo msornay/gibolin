@@ -1,7 +1,7 @@
 from typing import List, Optional
 from datetime import datetime
 
-from django.db.models import Q
+from django.db.models import Q, Sum, Count, F
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
@@ -33,6 +33,31 @@ api = ninja.NinjaAPI()
 @api.get("/healthcheck")
 def status(request):
     return {}
+
+
+@api.get("/stats")
+def get_stats(request):
+    """Get cellar statistics using average purchase price per reference"""
+    total_references = Reference.objects.count()
+    total_bottles = Reference.objects.aggregate(total=Sum('current_quantity'))['total'] or 0
+
+    # Calculate total value: avg_price_per_ref * current_quantity
+    total_value = 0
+    references = Reference.objects.annotate(
+        purchase_value=Sum(F('purchases__price') * F('purchases__quantity')),
+        purchase_quantity=Sum('purchases__quantity')
+    )
+
+    for ref in references:
+        if ref.purchase_quantity and ref.purchase_quantity > 0:
+            avg_price = ref.purchase_value / ref.purchase_quantity
+            total_value += float(avg_price) * ref.current_quantity
+
+    return {
+        "total_references": total_references,
+        "total_bottles": total_bottles,
+        "total_value": round(total_value, 2),
+    }
 
 
 class ReferenceIn(ninja.Schema):

@@ -64,6 +64,11 @@ make reset-with-data
 - Searches across: name, domain, category, region, appellation
 - Config: `django.contrib.postgres` in `INSTALLED_APPS`, `simple_unaccent` in `postgres/init.sql`
 
+### Stats Endpoint (`/api/stats`)
+- Returns `total_references`, `total_bottles`, `total_value`
+- `total_value` uses average purchase price per reference × `current_quantity`
+- Average price = `sum(price × quantity) / sum(quantity)` per reference
+
 ## Planned: Offline Support (PWA)
 
 To support quantity updates in cellars with no signal, implement PWA with Service Worker:
