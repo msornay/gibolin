@@ -59,10 +59,10 @@ make reset-with-data
 - Categories, Regions, Appellations are lookup tables with ordering support
 
 ### Search
-- Accent-insensitive search using PostgreSQL `unaccent` extension
+- Accent-insensitive using PostgreSQL `unaccent` extension
+- Multi-word: "Macon Lave" matches records where ALL words appear (in any field)
 - Searches across: name, domain, category, region, appellation
-- Requires `django.contrib.postgres` in `INSTALLED_APPS`
-- Text search config `simple_unaccent` created in `postgres/init.sql`
+- Config: `django.contrib.postgres` in `INSTALLED_APPS`, `simple_unaccent` in `postgres/init.sql`
 
 ## Planned: Offline Support (PWA)
 

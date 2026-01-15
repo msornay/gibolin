@@ -217,6 +217,20 @@ class ReferenceAPITest(TestCase):
         self.assertEqual(data["count"], 1)
         self.assertEqual(data["items"][0]["name"], "Test Wine")
 
+    def test_search_multi_word(self):
+        """Test that multi-word search matches all words across fields"""
+        from .models import Region
+        region = Region.objects.create(name="Mâconnais")
+        Reference.objects.create(name="Château Lavernette", region=region, vintage=2020)
+        Reference.objects.create(name="Other Wine", region=region, vintage=2019)
+
+        # "Macon Lave" should match region "Mâconnais" AND name "Lavernette"
+        response = self.client.get("/api/refs?search=Macon%20Lave")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["count"], 1)
+        self.assertIn("Lavernette", data["items"][0]["name"])
+
     def test_create_reference_validation(self):
         """Test validation on reference creation"""
         # Test missing required field

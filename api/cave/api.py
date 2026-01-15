@@ -169,19 +169,29 @@ def get_reference(request, sqid: str):
     return get_object_or_404(Reference, id=sqid_decode(sqid))
 
 
+def _search_word(word):
+    """Match a single word against any searchable field."""
+    return (
+        Q(name__unaccent__icontains=word) |
+        Q(domain__unaccent__icontains=word) |
+        Q(category__name__unaccent__icontains=word) |
+        Q(region__name__unaccent__icontains=word) |
+        Q(appellation__name__unaccent__icontains=word)
+    )
+
+
 @api.get("/refs", response=List[ReferenceOut])
 @ninja_paginate
 def list_reference(request, search: str = None):
     if not search:
         return Reference.objects.all()
 
-    return Reference.objects.filter(
-        Q(name__unaccent__icontains=search) |
-        Q(domain__unaccent__icontains=search) |
-        Q(category__name__unaccent__icontains=search) |
-        Q(region__name__unaccent__icontains=search) |
-        Q(appellation__name__unaccent__icontains=search)
-    ).distinct()
+    words = search.split()
+    query = _search_word(words[0])
+    for word in words[1:]:
+        query &= _search_word(word)
+
+    return Reference.objects.filter(query).distinct()
 
 
 @api.get("/categories", response=List[str])
