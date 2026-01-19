@@ -20,9 +20,10 @@ import {
   List,
   Card,
   InputNumber,
-  Statistic
+  Statistic,
+  Tooltip
 } from "antd";
-import { EditOutlined, PlusOutlined, ExportOutlined, HolderOutlined, BarChartOutlined } from "@ant-design/icons";
+import { EditOutlined, PlusOutlined, ExportOutlined, HolderOutlined, BarChartOutlined, EyeOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
 import { SketchPicker } from "react-color";
 import type { ColumnsType } from "antd/es/table";
 
@@ -48,6 +49,10 @@ export type Reference = {
   domain?: string;
   vintage?: number;
   current_quantity: number;
+  price_multiplier: number;
+  retail_price_override?: number;
+  retail_price?: number;
+  hidden_from_menu: boolean;
   purchases: Purchase[];
 };
 
@@ -236,6 +241,30 @@ function ReferenceTable() {
     },
   });
 
+  // Update hidden from menu
+  const updateHiddenMutation = useMutation({
+    mutationFn: ({ sqid, hidden, record }: { sqid: string; hidden: boolean; record: Reference }) =>
+      fetch(`http://localhost:8000/api/ref/${sqid}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: record.name,
+          category: record.category,
+          region: record.region,
+          appellation: record.appellation,
+          domain: record.domain,
+          vintage: record.vintage,
+          current_quantity: record.current_quantity,
+          price_multiplier: record.price_multiplier,
+          retail_price_override: record.retail_price_override,
+          hidden_from_menu: hidden,
+        }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['references'] });
+    },
+  });
+
   const saveCategoryOrder = React.useCallback((newOrder: string[]) => {
     setCategoryOrder(newOrder);
     saveCategoryOrderMutation.mutate(newOrder);
@@ -394,6 +423,18 @@ function ReferenceTable() {
               >
                 {record.current_quantity}
               </Button>
+              <Tooltip title={record.hidden_from_menu ? "Show in menu" : "Hide from menu"}>
+                <Button
+                  type="text"
+                  icon={record.hidden_from_menu ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+                  onClick={() => updateHiddenMutation.mutate({
+                    sqid: record.sqid,
+                    hidden: !record.hidden_from_menu,
+                    record
+                  })}
+                  style={{ color: record.hidden_from_menu ? '#999' : undefined }}
+                />
+              </Tooltip>
               <Button
                 type="text"
                 icon={<EditOutlined />}
@@ -456,6 +497,7 @@ function ReferenceTable() {
         dataSource={data?.items || []}
         loading={isLoading}
         rowKey="sqid"
+        rowClassName={(record) => record.hidden_from_menu ? 'row-hidden' : ''}
         pagination={{
           current: currentPage,
           pageSize: pageSize,

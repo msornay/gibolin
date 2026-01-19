@@ -17,8 +17,9 @@ import {
   message,
   Divider,
   Popconfirm,
+  Checkbox,
 } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 
@@ -373,6 +374,10 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
         appellation: referenceData.appellation,
         domain: referenceData.domain,
         vintage: referenceData.vintage,
+        current_quantity: referenceData.current_quantity,
+        hidden_from_menu: referenceData.hidden_from_menu,
+        price_multiplier: referenceData.price_multiplier,
+        retail_price_override: referenceData.retail_price_override,
       });
     } else {
       form.setFieldsValue({
@@ -382,6 +387,10 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
         appellation: undefined,
         domain: "",
         vintage: new Date().getFullYear(),
+        current_quantity: 0,
+        hidden_from_menu: false,
+        price_multiplier: 3,
+        retail_price_override: undefined,
       });
     }
   }, [reference, referenceData, form]);
@@ -451,6 +460,10 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
           appellation: undefined,
           domain: "",
           vintage: new Date().getFullYear(),
+          current_quantity: 0,
+          hidden_from_menu: false,
+          price_multiplier: 3,
+          retail_price_override: undefined,
         }}
       >
         <Form.Item
@@ -641,6 +654,59 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
             style={{ width: "100%" }}
           />
         </Form.Item>
+
+        <Form.Item
+          label="Current Quantity"
+          name="current_quantity"
+        >
+          <InputNumber
+            min={0}
+            style={{ width: "100%" }}
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="hidden_from_menu"
+          valuePropName="checked"
+        >
+          <Checkbox><EyeInvisibleOutlined style={{ marginRight: 8 }} />Hide from exported menu</Checkbox>
+        </Form.Item>
+
+        <Form.Item
+          label="Price Multiplier"
+          name="price_multiplier"
+        >
+          <InputNumber
+            min={1}
+            max={10}
+            step={0.1}
+            style={{ width: "100%" }}
+          />
+        </Form.Item>
+
+        <Form.Item
+          label="Retail Price Override"
+          name="retail_price_override"
+        >
+          <InputNumber
+            min={0}
+            step={1}
+            prefix="€"
+            placeholder="Leave empty to use calculated price"
+            style={{ width: "100%" }}
+          />
+        </Form.Item>
+
+        {reference && referenceData?.retail_price && (
+          <Form.Item label="Computed Retail Price">
+            <InputNumber
+              value={referenceData.retail_price}
+              disabled
+              prefix="€"
+              style={{ width: "100%" }}
+            />
+          </Form.Item>
+        )}
 
         <Form.Item>
           <Space>

@@ -64,6 +64,9 @@ class Reference(models.Model):
     domain = models.CharField(max_length=255, null=True, blank=True)
     vintage = models.IntegerField(null=True, blank=True)
     current_quantity = models.IntegerField(default=0)
+    price_multiplier = models.DecimalField(max_digits=4, decimal_places=2, default=3.00)
+    retail_price_override = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    hidden_from_menu = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["name"]

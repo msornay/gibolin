@@ -1,3 +1,4 @@
+import math
 from typing import List, Optional
 from datetime import datetime
 
@@ -68,6 +69,9 @@ class ReferenceIn(ninja.Schema):
     domain: Optional[str] = None
     vintage: Optional[int] = None
     current_quantity: Optional[int] = 0
+    price_multiplier: Optional[float] = 3.00
+    retail_price_override: Optional[float] = None
+    hidden_from_menu: Optional[bool] = False
 
     class Config:
         extra = "forbid"  # XXX(msy) to test
@@ -86,6 +90,24 @@ class PurchaseOut(ninja.Schema):
     price: float
 
 
+def _compute_retail_price(obj):
+    """Compute retail price: override or avg_purchase_price × multiplier (ceiling)"""
+    if obj.retail_price_override:
+        return float(obj.retail_price_override)
+
+    purchases = obj.purchases.all()
+    if not purchases:
+        return None
+
+    total_value = sum(float(p.price) * p.quantity for p in purchases)
+    total_qty = sum(p.quantity for p in purchases)
+    if total_qty == 0:
+        return None
+
+    avg_price = total_value / total_qty
+    return math.ceil(avg_price * float(obj.price_multiplier))
+
+
 class ReferenceOut(ninja.Schema):
     sqid: str
     name: str
@@ -95,6 +117,10 @@ class ReferenceOut(ninja.Schema):
     domain: Optional[str]
     vintage: Optional[int]
     current_quantity: int
+    price_multiplier: float
+    retail_price_override: Optional[float]
+    retail_price: Optional[int]
+    hidden_from_menu: bool
     purchases: List[PurchaseOut]
 
     @staticmethod
@@ -112,6 +138,10 @@ class ReferenceOut(ninja.Schema):
     @staticmethod
     def resolve_appellation(obj):
         return obj.appellation.name if obj.appellation else None
+
+    @staticmethod
+    def resolve_retail_price(obj):
+        return _compute_retail_price(obj)
 
     @staticmethod
     def resolve_purchases(obj):
@@ -546,10 +576,10 @@ def delete_purchase(request, purchase_id: int):
 def export_wine_menu_html(request):
     """Generate HTML wine menu for printing using Jinja template"""
 
-    # Get all references with their categories, regions, and appellations
-    references = Reference.objects.select_related(
+    # Get visible references with their categories, regions, and appellations
+    references = Reference.objects.filter(hidden_from_menu=False).select_related(
         "category", "region", "appellation"
-    ).all()
+    )
 
     # Get categories, regions, and appellations in order
     categories = Category.objects.all().order_by("order")
@@ -614,7 +644,7 @@ def export_wine_menu_html(request):
                                 key=lambda x: x.name or "",
                             )
                             for wine in sorted_wines:
-                                wine_data = {"name": wine.name, "details": None}
+                                wine_data = {"name": wine.name, "details": None, "price": _compute_retail_price(wine)}
 
                                 # Build details string
                                 details = []
@@ -639,7 +669,7 @@ def export_wine_menu_html(request):
                             key=lambda x: x.name or "",
                         )
                         for wine in sorted_wines:
-                            wine_data = {"name": wine.name, "details": None}
+                            wine_data = {"name": wine.name, "details": None, "price": _compute_retail_price(wine)}
 
                             details = []
                             if wine.domain:
@@ -684,7 +714,7 @@ def export_wine_menu_html(request):
                             key=lambda x: x.name or "",
                         )
                         for wine in sorted_wines:
-                            wine_data = {"name": wine.name, "details": None}
+                            wine_data = {"name": wine.name, "details": None, "price": _compute_retail_price(wine)}
 
                             details = []
                             if wine.domain:
@@ -707,7 +737,7 @@ def export_wine_menu_html(request):
                         appellation_groups["No Appellation"], key=lambda x: x.name or ""
                     )
                     for wine in sorted_wines:
-                        wine_data = {"name": wine.name, "details": None}
+                        wine_data = {"name": wine.name, "details": None, "price": _compute_retail_price(wine)}
 
                         details = []
                         if wine.domain:
@@ -773,7 +803,7 @@ def export_wine_menu_html(request):
                             key=lambda x: x.name or "",
                         )
                         for wine in sorted_wines:
-                            wine_data = {"name": wine.name, "details": None}
+                            wine_data = {"name": wine.name, "details": None, "price": _compute_retail_price(wine)}
 
                             details = []
                             if wine.domain:
@@ -796,7 +826,7 @@ def export_wine_menu_html(request):
                         appellation_groups["No Appellation"], key=lambda x: x.name or ""
                     )
                     for wine in sorted_wines:
-                        wine_data = {"name": wine.name, "details": None}
+                        wine_data = {"name": wine.name, "details": None, "price": _compute_retail_price(wine)}
 
                         details = []
                         if wine.domain:
@@ -836,7 +866,7 @@ def export_wine_menu_html(request):
                         appellation_groups[appellation.name], key=lambda x: x.name or ""
                     )
                     for wine in sorted_wines:
-                        wine_data = {"name": wine.name, "details": None}
+                        wine_data = {"name": wine.name, "details": None, "price": _compute_retail_price(wine)}
 
                         details = []
                         if wine.domain:
@@ -859,7 +889,7 @@ def export_wine_menu_html(request):
                     appellation_groups["No Appellation"], key=lambda x: x.name or ""
                 )
                 for wine in sorted_wines:
-                    wine_data = {"name": wine.name, "details": None}
+                    wine_data = {"name": wine.name, "details": None, "price": _compute_retail_price(wine)}
 
                     details = []
                     if wine.domain:

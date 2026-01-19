@@ -69,6 +69,18 @@ make reset-with-data
 - `total_value` uses average purchase price per reference × `current_quantity`
 - Average price = `sum(price × quantity) / sum(quantity)` per reference
 
+### Retail Price
+- Each reference has `price_multiplier` (default 3) and optional `retail_price_override`
+- Computed: `ceil(avg_purchase_price × multiplier)` rounded up to nearest euro
+- Override takes precedence if set
+- Used in exported menu
+
+### Menu Export (`/api/export/html`)
+- Generates printable HTML wine menu
+- References with `hidden_from_menu=true` are excluded
+- Eye icon toggle in table (dimmed rows = hidden)
+- Prices shown from computed retail_price
+
 ## Planned: Offline Support (PWA)
 
 To support quantity updates in cellars with no signal, implement PWA with Service Worker:

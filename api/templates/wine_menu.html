@@ -151,7 +151,7 @@
                                         <div class="wine-details">
                                             {{ wine.name }}{% if wine.details %} - {{ wine.details }}{% endif %}
                                         </div>
-                                        <div class="wine-price">€0</div>
+                                        <div class="wine-price">{% if wine.price %}€{{ wine.price }}{% else %}-{% endif %}</div>
                                     </div>
                                 {% endfor %}
                             {% endif %}
