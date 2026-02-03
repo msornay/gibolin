@@ -40,13 +40,12 @@ services:
     working_dir: /app
     volumes:
       - ./ui:/app
-      - /app/node_modules
     environment:
       - CI=true
     depends_on:
       - ui
       - api
-    command: npx playwright test
+    command: sh -c "npm install && npx playwright test --config=e2e/playwright.config.ts"
     profiles:
       - e2e
 

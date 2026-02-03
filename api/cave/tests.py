@@ -525,11 +525,21 @@ class MenuTemplateAPITest(TestCase):
 
     def test_generate_menu_template(self):
         """Test generating menu template from existing data"""
-        # Create some categories, regions, appellations
-        Category.objects.create(name="Rouge", order=0)
-        Category.objects.create(name="Blanc", order=1)
-        Region.objects.create(name="Bourgogne", order=0)
-        Appellation.objects.create(name="Côte de Nuits", order=0)
+        # Create categories, regions, appellations with references
+        cat_rouge = Category.objects.create(name="Rouge", order=0)
+        cat_blanc = Category.objects.create(name="Blanc", order=1)
+        region = Region.objects.create(name="Bourgogne", order=0)
+        appellation = Appellation.objects.create(name="Côte de Nuits", order=0)
+
+        # Create visible references to include items in template
+        Reference.objects.create(
+            name="Test Red", category=cat_rouge, region=region,
+            appellation=appellation, hidden_from_menu=False
+        )
+        Reference.objects.create(
+            name="Test White", category=cat_blanc, region=region,
+            appellation=appellation, hidden_from_menu=False
+        )
 
         response = self.client.get("/api/menu/template/generate")
         self.assertEqual(response.status_code, 200)
