@@ -17,14 +17,11 @@ import {
   Space,
   Typography,
   App as AntApp,
-  List,
-  Card,
   InputNumber,
   Statistic,
   Tooltip
 } from "antd";
-import { EditOutlined, PlusOutlined, ExportOutlined, HolderOutlined, BarChartOutlined, EyeOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
-import { SketchPicker } from "react-color";
+import { EditOutlined, PlusOutlined, ExportOutlined, BarChartOutlined, EyeOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 
 import { ReferenceDetails } from "@/components/reference-form";
@@ -85,9 +82,7 @@ function ReferenceTable() {
   const [selectedReference, setSelectedReference] = React.useState<Reference | null>(null);
   const [isExportModalOpen, setIsExportModalOpen] = React.useState(false);
   const [isStatsModalOpen, setIsStatsModalOpen] = React.useState(false);
-  const [categoryOrder, setCategoryOrder] = React.useState<string[]>([]);
-  const [menuStructure, setMenuStructure] = React.useState<any[]>([]);
-  const [colorPickerOpen, setColorPickerOpen] = React.useState<string | null>(null);
+  const [menuTemplate, setMenuTemplate] = React.useState<string>("");
   const [editingQuantity, setEditingQuantity] = React.useState<string | null>(null);
   const [quantityValue, setQuantityValue] = React.useState<number>(0);
   const queryClient = useQueryClient();
@@ -158,11 +153,11 @@ function ReferenceTable() {
       fetch('http://localhost:8000/api/categories').then(res => res.json()),
   });
 
-  // Fetch menu structure for nested ordering
-  const { data: menuStructureData } = useQuery({
-    queryKey: ["menuStructure"],
+  // Fetch menu template when export modal opens
+  const { data: templateData } = useQuery({
+    queryKey: ["menuTemplate"],
     queryFn: () =>
-      fetch('http://localhost:8000/api/menu/structure').then(res => res.json()),
+      fetch('http://localhost:8000/api/menu/template').then(res => res.json()),
     enabled: isExportModalOpen,
   });
 
@@ -173,58 +168,21 @@ function ReferenceTable() {
     enabled: isStatsModalOpen,
   });
 
-  // Set category order from server data (already ordered by server)
+  // Set menu template from server data
   React.useEffect(() => {
-    if (categories) {
-      setCategoryOrder([...categories]);
+    if (templateData?.content !== undefined) {
+      setMenuTemplate(templateData.content);
     }
-  }, [categories]);
+  }, [templateData]);
 
-  // Set menu structure from server data
-  React.useEffect(() => {
-    if (menuStructureData?.structure) {
-      setMenuStructure([...menuStructureData.structure]);
-    }
-  }, [menuStructureData]);
-
-  // Save category order to server
-  const saveCategoryOrderMutation = useMutation({
-    mutationFn: (newOrder: string[]) =>
-      fetch('http://localhost:8000/api/categories/order', {
+  // Save menu template
+  const saveTemplateMutation = useMutation({
+    mutationFn: (content: string) =>
+      fetch('http://localhost:8000/api/menu/template', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ categories: newOrder }),
+        body: JSON.stringify({ content }),
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-    },
-  });
-
-  // Save nested menu order to server
-  const saveMenuOrderMutation = useMutation({
-    mutationFn: (newStructure: any[]) =>
-      fetch('http://localhost:8000/api/menu/order', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: newStructure }),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-      queryClient.invalidateQueries({ queryKey: ['menuStructure'] });
-    },
-  });
-
-  // Save category color to server
-  const saveCategoryColorMutation = useMutation({
-    mutationFn: ({ name, color }: { name: string; color: string }) =>
-      fetch('http://localhost:8000/api/categories/color', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, color }),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['menuStructure'] });
-    },
   });
 
   // Update reference quantity
@@ -265,41 +223,17 @@ function ReferenceTable() {
     },
   });
 
-  const saveCategoryOrder = React.useCallback((newOrder: string[]) => {
-    setCategoryOrder(newOrder);
-    saveCategoryOrderMutation.mutate(newOrder);
-  }, [saveCategoryOrderMutation]);
+  // Handle template save
+  const handleSaveTemplate = React.useCallback(() => {
+    saveTemplateMutation.mutate(menuTemplate);
+  }, [menuTemplate, saveTemplateMutation]);
 
-  // Handle drag end for category reordering
-  const handleCategoryDragEnd = React.useCallback((fromIndex: number, toIndex: number) => {
-    const newOrder = [...categoryOrder];
-    const [removed] = newOrder.splice(fromIndex, 1);
-    newOrder.splice(toIndex, 0, removed);
-    saveCategoryOrder(newOrder);
-  }, [categoryOrder, saveCategoryOrder]);
-
-  // Handle drag end for nested menu reordering
-  const handleMenuDragEnd = React.useCallback((fromIndex: number, toIndex: number) => {
-    const newStructure = [...menuStructure];
-    const [removed] = newStructure.splice(fromIndex, 1);
-    newStructure.splice(toIndex, 0, removed);
-    setMenuStructure(newStructure);
-    saveMenuOrderMutation.mutate(newStructure);
-  }, [menuStructure, saveMenuOrderMutation]);
-
-  // Handle color change
-  const handleColorChange = React.useCallback((categoryName: string, color: string) => {
-    // Update local state
-    const newStructure = menuStructure.map(item => 
-      item.type === 'category' && item.name === categoryName 
-        ? { ...item, color }
-        : item
-    );
-    setMenuStructure(newStructure);
-    
-    // Save to server
-    saveCategoryColorMutation.mutate({ name: categoryName, color });
-  }, [menuStructure, saveCategoryColorMutation]);
+  // Handle generate template from current data
+  const handleGenerateTemplate = React.useCallback(async () => {
+    const response = await fetch('http://localhost:8000/api/menu/template/generate');
+    const data = await response.json();
+    setMenuTemplate(data.content);
+  }, []);
 
   // Handle quantity editing
   const handleQuantityEdit = React.useCallback((sqid: string, currentQuantity: number) => {
@@ -551,98 +485,29 @@ function ReferenceTable() {
         width={600}
       >
         <div style={{ marginBottom: '16px' }}>
-          <Typography.Text strong>Menu Structure</Typography.Text>
+          <Typography.Text strong>Menu Template</Typography.Text>
           <Typography.Paragraph type="secondary" style={{ marginTop: '4px' }}>
-            Drag categories, regions, and appellations to reorder them. Categories contain regions, which contain appellations.
+            Define menu order with: # Category, 2-space indent for Region, 4-space for Appellation.
+            Items not listed appear alphabetically at the end.
           </Typography.Paragraph>
         </div>
-        
-        <Card size="small">
-          {menuStructure.map((item, index) => (
-            <div
-              key={`${item.type}-${item.name}-${item.parent || ''}`}
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData('text/plain', index.toString());
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-                handleMenuDragEnd(fromIndex, index);
-              }}
-              style={{
-                padding: '8px 12px',
-                margin: '4px 0',
-                marginLeft: item.type === 'region' ? '20px' : item.type === 'appellation' ? '40px' : '0px',
-                backgroundColor: item.type === 'category' ? '#f9f9f9' : item.type === 'region' ? '#f0f8ff' : '#f5f5f5',
-                border: '1px solid #d9d9d9',
-                borderRadius: '4px',
-                cursor: 'move',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              <HolderOutlined style={{ color: '#999' }} />
-              {item.type === 'category' ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
-                  <strong>{item.name}</strong>
-                  <div style={{ position: 'relative' }}>
-                    <div
-                      onClick={() => setColorPickerOpen(colorPickerOpen === item.name ? null : item.name)}
-                      style={{
-                        width: '20px',
-                        height: '20px',
-                        backgroundColor: item.color || '#000000',
-                        border: '2px solid #fff',
-                        borderRadius: '3px',
-                        cursor: 'pointer',
-                        boxShadow: '0 0 0 1px rgba(0,0,0,0.1)',
-                      }}
-                    />
-                    {colorPickerOpen === item.name && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '25px',
-                        left: '0',
-                        zIndex: 1000,
-                      }}>
-                        <div
-                          style={{
-                            position: 'fixed',
-                            top: '0',
-                            left: '0',
-                            right: '0',
-                            bottom: '0',
-                          }}
-                          onClick={() => setColorPickerOpen(null)}
-                        />
-                        <SketchPicker
-                          color={item.color || '#000000'}
-                          onChange={(color) => handleColorChange(item.name, color.hex)}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : item.type === 'region' ? (
-                <span style={{ fontStyle: 'italic', color: '#666' }}>
-                  {item.name} <small>(in {item.parent})</small>
-                </span>
-              ) : (
-                <span style={{ fontStyle: 'italic', color: '#999', fontSize: '0.9em' }}>
-                  {item.name} <small>(in {item.parent})</small>
-                </span>
-              )}
-            </div>
-          ))}
-          {menuStructure.length === 0 && (
-            <Typography.Text type="secondary">Loading menu structure...</Typography.Text>
-          )}
-        </Card>
+
+        <Input.TextArea
+          value={menuTemplate}
+          onChange={(e) => setMenuTemplate(e.target.value)}
+          rows={15}
+          style={{ fontFamily: 'monospace', marginBottom: '12px' }}
+          placeholder={"# Rouge\n  Bourgogne\n    Côte de Nuits\n# Blanc\n  Loire"}
+        />
+
+        <Space>
+          <Button onClick={handleGenerateTemplate}>
+            Generate from data
+          </Button>
+          <Button onClick={handleSaveTemplate} loading={saveTemplateMutation.isPending}>
+            Save template
+          </Button>
+        </Space>
       </Modal>
 
       <Modal

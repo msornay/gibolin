@@ -85,3 +85,22 @@ class Purchase(models.Model):
 
     class Meta:
         ordering = ["-date"]
+
+
+class MenuTemplate(models.Model):
+    content = models.TextField(default="")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Menu Template"
+
+    @classmethod
+    def get_template(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj.content
+
+    @classmethod
+    def set_template(cls, content):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        obj.content = content
+        obj.save()

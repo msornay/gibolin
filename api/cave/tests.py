@@ -1,8 +1,8 @@
 from django.test import TestCase, Client
 import json
 
-from .models import Reference, Purchase, Category
-from .api import sqid_encode, sqid_decode
+from .models import Reference, Purchase, Category, Region, Appellation, MenuTemplate
+from .api import sqid_encode, sqid_decode, _parse_menu_template
 
 
 class ReferenceModelTest(TestCase):
@@ -417,3 +417,126 @@ class PurchaseAPITest(TestCase):
         self.assertEqual(len(data["purchases"]), 1)
         self.assertEqual(data["purchases"][0]["quantity"], 6)
         self.assertEqual(data["purchases"][0]["price"], 15.50)
+
+
+class MenuTemplateParseTest(TestCase):
+    def test_parse_empty_template(self):
+        """Test parsing an empty template returns empty dicts"""
+        cat_order, reg_order, app_order = _parse_menu_template("")
+        self.assertEqual(cat_order, {})
+        self.assertEqual(reg_order, {})
+        self.assertEqual(app_order, {})
+
+    def test_parse_categories_only(self):
+        """Test parsing template with only categories"""
+        template = """# Rouge
+# Blanc
+# Rosé"""
+        cat_order, reg_order, app_order = _parse_menu_template(template)
+        self.assertEqual(cat_order, {"Rouge": 0, "Blanc": 1, "Rosé": 2})
+        self.assertEqual(reg_order, {})
+        self.assertEqual(app_order, {})
+
+    def test_parse_categories_and_regions(self):
+        """Test parsing template with categories and regions"""
+        template = """# Rouge
+  Bourgogne
+  Bordeaux
+# Blanc
+  Loire"""
+        cat_order, reg_order, app_order = _parse_menu_template(template)
+        self.assertEqual(cat_order, {"Rouge": 0, "Blanc": 1})
+        # Regions reset index per category
+        self.assertEqual(reg_order, {"Bourgogne": 0, "Bordeaux": 1, "Loire": 0})
+        self.assertEqual(app_order, {})
+
+    def test_parse_full_hierarchy(self):
+        """Test parsing template with categories, regions, and appellations"""
+        template = """# Rouge
+  Bourgogne
+    Côte de Nuits
+    Côte de Beaune
+  Bordeaux
+    Médoc
+# Blanc
+  Loire
+    Sancerre"""
+        cat_order, reg_order, app_order = _parse_menu_template(template)
+        self.assertEqual(cat_order, {"Rouge": 0, "Blanc": 1})
+        self.assertEqual(reg_order, {"Bourgogne": 0, "Bordeaux": 1, "Loire": 0})
+        # Appellations reset index per region
+        self.assertEqual(app_order, {
+            "Côte de Nuits": 0,
+            "Côte de Beaune": 1,
+            "Médoc": 0,
+            "Sancerre": 0
+        })
+
+    def test_parse_with_blank_lines(self):
+        """Test parsing template ignores blank lines"""
+        template = """# Rouge
+
+  Bourgogne
+
+    Côte de Nuits
+
+# Blanc"""
+        cat_order, reg_order, app_order = _parse_menu_template(template)
+        self.assertEqual(cat_order, {"Rouge": 0, "Blanc": 1})
+        self.assertEqual(reg_order, {"Bourgogne": 0})
+        self.assertEqual(app_order, {"Côte de Nuits": 0})
+
+    def test_parse_strips_trailing_whitespace(self):
+        """Test parsing strips trailing whitespace from names"""
+        template = """# Rouge
+  Bourgogne
+    Côte de Nuits   """
+        cat_order, reg_order, app_order = _parse_menu_template(template)
+        self.assertEqual(cat_order, {"Rouge": 0})
+        self.assertEqual(reg_order, {"Bourgogne": 0})
+        self.assertEqual(app_order, {"Côte de Nuits": 0})
+
+
+class MenuTemplateAPITest(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_get_menu_template_empty(self):
+        """Test getting menu template when none exists"""
+        response = self.client.get("/api/menu/template")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["content"], "")
+
+    def test_save_and_get_menu_template(self):
+        """Test saving and retrieving menu template"""
+        template_content = "# Rouge\n  Bourgogne"
+        response = self.client.put(
+            "/api/menu/template",
+            json.dumps({"content": template_content}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.get("/api/menu/template")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["content"], template_content)
+
+    def test_generate_menu_template(self):
+        """Test generating menu template from existing data"""
+        # Create some categories, regions, appellations
+        Category.objects.create(name="Rouge", order=0)
+        Category.objects.create(name="Blanc", order=1)
+        Region.objects.create(name="Bourgogne", order=0)
+        Appellation.objects.create(name="Côte de Nuits", order=0)
+
+        response = self.client.get("/api/menu/template/generate")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        # Check template contains expected entries
+        self.assertIn("# Rouge", data["content"])
+        self.assertIn("# Blanc", data["content"])
+        self.assertIn("  Bourgogne", data["content"])
+        self.assertIn("    Côte de Nuits", data["content"])

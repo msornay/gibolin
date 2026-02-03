@@ -11,7 +11,7 @@ import ninja
 from ninja.pagination import paginate as ninja_paginate
 import sqids
 
-from .models import Reference, Purchase, Category, Region, Appellation
+from .models import Reference, Purchase, Category, Region, Appellation, MenuTemplate
 
 
 sqids = sqids.Sqids(min_length=8)
@@ -519,6 +519,94 @@ def get_menu_structure(request):
     return {"structure": structure}
 
 
+class MenuTemplateIn(ninja.Schema):
+    content: str
+
+
+@api.get("/menu/template")
+def get_menu_template(request):
+    """Get the menu template"""
+    return {"content": MenuTemplate.get_template()}
+
+
+@api.put("/menu/template")
+def save_menu_template(request, payload: MenuTemplateIn):
+    """Save the menu template"""
+    MenuTemplate.set_template(payload.content)
+    return {"success": True}
+
+
+@api.get("/menu/template/generate")
+def generate_menu_template(request):
+    """Generate a template from current data"""
+    categories = Category.objects.all().order_by("order", "name")
+    regions = Region.objects.all().order_by("order", "name")
+    appellations = Appellation.objects.all().order_by("order", "name")
+    references = Reference.objects.filter(hidden_from_menu=False).select_related(
+        "category", "region", "appellation"
+    )
+
+    lines = []
+    for category in categories:
+        # Check if category has visible wines
+        cat_wines = [r for r in references if r.category == category]
+        if not cat_wines:
+            continue
+
+        lines.append(f"# {category.name}")
+
+        # Find regions in this category
+        cat_regions = set(r.region.name for r in cat_wines if r.region)
+        for region in regions:
+            if region.name not in cat_regions:
+                continue
+
+            lines.append(f"  {region.name}")
+
+            # Find appellations in this region for this category
+            region_wines = [r for r in cat_wines if r.region and r.region.name == region.name]
+            region_appellations = set(r.appellation.name for r in region_wines if r.appellation)
+            for appellation in appellations:
+                if appellation.name in region_appellations:
+                    lines.append(f"    {appellation.name}")
+
+    return {"content": "\n".join(lines)}
+
+
+def _parse_menu_template(content):
+    """Parse template into ordering dicts"""
+    category_order = {}
+    region_order = {}
+    appellation_order = {}
+
+    cat_idx = 0
+    reg_idx = 0
+    app_idx = 0
+
+    for line in content.split("\n"):
+        line = line.rstrip()
+        if not line:
+            continue
+
+        if line.startswith("# "):
+            name = line[2:].strip()
+            category_order[name] = cat_idx
+            cat_idx += 1
+            reg_idx = 0
+            app_idx = 0
+        elif line.startswith("    "):
+            name = line.strip()
+            appellation_order[name] = app_idx
+            app_idx += 1
+        elif line.startswith("  "):
+            name = line.strip()
+            region_order[name] = reg_idx
+            reg_idx += 1
+            app_idx = 0
+
+    return category_order, region_order, appellation_order
+
+
 @api.get("/ref/{sqid}/purchases", response=List[PurchaseOut])
 def list_purchases(request, sqid: str):
     reference = get_object_or_404(Reference, id=sqid_decode(sqid))
@@ -581,10 +669,21 @@ def export_wine_menu_html(request):
         "category", "region", "appellation"
     )
 
-    # Get categories, regions, and appellations in order
-    categories = Category.objects.all().order_by("order")
-    regions = Region.objects.all().order_by("order")
-    appellations = Appellation.objects.all().order_by("order")
+    # Parse template for ordering
+    template_content = MenuTemplate.get_template()
+    cat_order, reg_order, app_order = _parse_menu_template(template_content)
+
+    def sort_key(item, order_dict):
+        """Return (order, name) for sorting - template items first, then alphabetical"""
+        name = item.name if hasattr(item, 'name') else item
+        if name in order_dict:
+            return (0, order_dict[name], name)
+        return (1, 0, name)
+
+    # Get categories, regions, and appellations sorted by template then alphabetically
+    categories = sorted(Category.objects.all(), key=lambda x: sort_key(x, cat_order))
+    regions = sorted(Region.objects.all(), key=lambda x: sort_key(x, reg_order))
+    appellations = sorted(Appellation.objects.all(), key=lambda x: sort_key(x, app_order))
 
     # Create nested structure for the template
     template_categories = []
