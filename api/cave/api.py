@@ -2,7 +2,7 @@ import math
 from typing import List, Optional
 from datetime import datetime
 
-from django.db.models import Q, Sum, Count, F
+from django.db.models import Q, Sum, F
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string

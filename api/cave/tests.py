@@ -1,7 +1,7 @@
 from django.test import TestCase, Client
 import json
 
-from .models import Reference, Purchase, Category, Region, Appellation, MenuTemplate
+from .models import Reference, Purchase, Category, Region, Appellation
 from .api import sqid_encode, sqid_decode, _parse_menu_template
 
 
