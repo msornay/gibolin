@@ -25,6 +25,7 @@ import { EditOutlined, PlusOutlined, ExportOutlined, BarChartOutlined, EyeOutlin
 import type { ColumnsType } from "antd/es/table";
 
 import { ReferenceDetails } from "@/components/reference-form";
+import { API_BASE_URL } from "@/api";
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -65,7 +66,7 @@ const fetchReferences = async (
   limit = 20,
 ): Promise<RefsResponse> => {
   const response = await fetch(
-    `http://localhost:8000/api/refs?offset=${(page - 1) * limit}&limit=${limit}${
+    `${API_BASE_URL}/api/refs?offset=${(page - 1) * limit}&limit=${limit}${
       search ? `&search=${search}` : ""
     }`,
   );
@@ -117,7 +118,7 @@ function ReferenceTable() {
 
   const handleHtmlExport = React.useCallback(() => {
     // Open HTML export in new window for printing
-    const exportUrl = 'http://localhost:8000/api/export/html';
+    const exportUrl = `${API_BASE_URL}/api/export/html`;
     const printWindow = window.open(exportUrl, '_blank');
     
     if (printWindow) {
@@ -150,21 +151,21 @@ function ReferenceTable() {
   const { data: categories } = useQuery({
     queryKey: ["categories"],
     queryFn: () => 
-      fetch('http://localhost:8000/api/categories').then(res => res.json()),
+      fetch(`${API_BASE_URL}/api/categories`).then(res => res.json()),
   });
 
   // Fetch menu template when export modal opens
   const { data: templateData } = useQuery({
     queryKey: ["menuTemplate"],
     queryFn: () =>
-      fetch('http://localhost:8000/api/menu/template').then(res => res.json()),
+      fetch(`${API_BASE_URL}/api/menu/template`).then(res => res.json()),
     enabled: isExportModalOpen,
   });
 
   // Fetch stats when modal opens
   const { data: stats } = useQuery({
     queryKey: ["stats"],
-    queryFn: () => fetch('http://localhost:8000/api/stats').then(res => res.json()),
+    queryFn: () => fetch(`${API_BASE_URL}/api/stats`).then(res => res.json()),
     enabled: isStatsModalOpen,
   });
 
@@ -178,7 +179,7 @@ function ReferenceTable() {
   // Save menu template
   const saveTemplateMutation = useMutation({
     mutationFn: (content: string) =>
-      fetch('http://localhost:8000/api/menu/template', {
+      fetch(`${API_BASE_URL}/api/menu/template`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),
@@ -188,7 +189,7 @@ function ReferenceTable() {
   // Update reference quantity
   const updateQuantityMutation = useMutation({
     mutationFn: ({ sqid, quantity }: { sqid: string; quantity: number }) =>
-      fetch(`http://localhost:8000/api/ref/${sqid}/quantity`, {
+      fetch(`${API_BASE_URL}/api/ref/${sqid}/quantity`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity }),
@@ -202,7 +203,7 @@ function ReferenceTable() {
   // Update hidden from menu
   const updateHiddenMutation = useMutation({
     mutationFn: ({ sqid, hidden, record }: { sqid: string; hidden: boolean; record: Reference }) =>
-      fetch(`http://localhost:8000/api/ref/${sqid}`, {
+      fetch(`${API_BASE_URL}/api/ref/${sqid}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -230,7 +231,7 @@ function ReferenceTable() {
 
   // Handle generate template from current data
   const handleGenerateTemplate = React.useCallback(async () => {
-    const response = await fetch('http://localhost:8000/api/menu/template/generate');
+    const response = await fetch(`${API_BASE_URL}/api/menu/template/generate`);
     const data = await response.json();
     setMenuTemplate(data.content);
   }, []);

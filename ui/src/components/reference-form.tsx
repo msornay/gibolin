@@ -24,6 +24,7 @@ import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 
 import { Reference, Purchase } from "../index";
+import { API_BASE_URL } from "@/api";
 
 const { Title } = Typography;
 
@@ -50,21 +51,21 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   const { data: categories, refetch: refetchCategories } = useQuery({
     queryKey: ['categories'],
     queryFn: () => 
-      fetch('http://localhost:8000/api/categories').then(res => res.json()),
+      fetch(`${API_BASE_URL}/api/categories`).then(res => res.json()),
   });
 
   // Fetch regions
   const { data: regions, refetch: refetchRegions } = useQuery({
     queryKey: ['regions'],
     queryFn: () => 
-      fetch('http://localhost:8000/api/regions').then(res => res.json()),
+      fetch(`${API_BASE_URL}/api/regions`).then(res => res.json()),
   });
 
   // Fetch appellations
   const { data: appellations, refetch: refetchAppellations } = useQuery({
     queryKey: ['appellations'],
     queryFn: () => 
-      fetch('http://localhost:8000/api/appellations').then(res => res.json()),
+      fetch(`${API_BASE_URL}/api/appellations`).then(res => res.json()),
   });
 
 
@@ -73,7 +74,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   const { data: referenceData } = useQuery({
     queryKey: ["reference", reference?.sqid],
     queryFn: () =>
-      fetch(`http://localhost:8000/api/ref/${reference?.sqid}`).then((res) =>
+      fetch(`${API_BASE_URL}/api/ref/${reference?.sqid}`).then((res) =>
         res.json(),
       ),
     enabled: reference !== null,
@@ -82,7 +83,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   // Update reference mutation
   const updateMutation = useMutation({
     mutationFn: (values: any) =>
-      fetch(`http://localhost:8000/api/ref/${reference?.sqid}`, {
+      fetch(`${API_BASE_URL}/api/ref/${reference?.sqid}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
@@ -107,7 +108,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   // Create category mutation
   const createCategoryMutation = useMutation({
     mutationFn: (categoryName: string) =>
-      fetch(`http://localhost:8000/api/categories`, {
+      fetch(`${API_BASE_URL}/api/categories`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: categoryName }),
@@ -124,7 +125,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   // Create region mutation
   const createRegionMutation = useMutation({
     mutationFn: (regionName: string) =>
-      fetch(`http://localhost:8000/api/regions`, {
+      fetch(`${API_BASE_URL}/api/regions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: regionName }),
@@ -141,7 +142,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   // Create appellation mutation
   const createAppellationMutation = useMutation({
     mutationFn: (appellationName: string) =>
-      fetch(`http://localhost:8000/api/appellations`, {
+      fetch(`${API_BASE_URL}/api/appellations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: appellationName }),
@@ -158,7 +159,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   // Create reference mutation
   const createMutation = useMutation({
     mutationFn: (values: any) =>
-      fetch(`http://localhost:8000/api/ref`, {
+      fetch(`${API_BASE_URL}/api/ref`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
@@ -183,7 +184,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   // Purchase mutations
   const createPurchaseMutation = useMutation({
     mutationFn: (values: any) =>
-      fetch(`http://localhost:8000/api/ref/${reference?.sqid}/purchases`, {
+      fetch(`${API_BASE_URL}/api/ref/${reference?.sqid}/purchases`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -205,7 +206,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
 
   const updatePurchaseMutation = useMutation({
     mutationFn: ({ id, values }: { id: number; values: any }) =>
-      fetch(`http://localhost:8000/api/purchase/${id}`, {
+      fetch(`${API_BASE_URL}/api/purchase/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -228,7 +229,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
 
   const deletePurchaseMutation = useMutation({
     mutationFn: (id: number) =>
-      fetch(`http://localhost:8000/api/purchase/${id}`, {
+      fetch(`${API_BASE_URL}/api/purchase/${id}`, {
         method: "DELETE",
       }),
     onSuccess: () => {
