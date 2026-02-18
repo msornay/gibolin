@@ -35,19 +35,5 @@ services:
     depends_on:
       - api
 
-  e2e:
-    image: mcr.microsoft.com/playwright:v1.48.0-jammy
-    working_dir: /app
-    volumes:
-      - ./ui:/app
-    environment:
-      - CI=true
-    depends_on:
-      - ui
-      - api
-    command: sh -c "npm install && npx playwright test --config=e2e/playwright.config.ts"
-    profiles:
-      - e2e
-
 volumes:
   postgres-data:
