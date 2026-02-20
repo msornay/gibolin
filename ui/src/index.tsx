@@ -355,7 +355,7 @@ function ReferenceTable() {
                 size="small"
                 onClick={() => handleQuantityEdit(record.sqid, record.current_quantity)}
                 title={`Current quantity: ${record.current_quantity}`}
-                style={{ width: 40 }}
+                style={{ width: 48, padding: '0 4px', textAlign: 'center' }}
               >
                 {record.current_quantity}
               </Button>
