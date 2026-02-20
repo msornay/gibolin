@@ -48,16 +48,16 @@ class Command(BaseCommand):
     def create_categories(self):
         """Create wine categories with colors"""
         categories = [
-            ("Blancs", "#4A90E2", 0),
-            ("Rouges", "#B71C1C", 1),
-            ("Rosés", "#E91E63", 2),
-            ("Bulles", "#FFD700", 3),
-            ("Macération", "#FF9800", 4),
+            ("Blancs", "#4A90E2"),
+            ("Rouges", "#B71C1C"),
+            ("Rosés", "#E91E63"),
+            ("Bulles", "#FFD700"),
+            ("Macération", "#FF9800"),
         ]
 
-        for name, color, order in categories:
+        for name, color in categories:
             Category.objects.get_or_create(
-                name=name, defaults={"color": color, "order": order}
+                name=name, defaults={"color": color}
             )
 
     def create_regions(self):
@@ -78,8 +78,8 @@ class Command(BaseCommand):
             "Beaujolais",
         ]
 
-        for i, name in enumerate(regions):
-            Region.objects.get_or_create(name=name, defaults={"order": i})
+        for name in regions:
+            Region.objects.get_or_create(name=name)
 
     def create_appellations(self):
         """Create appellations based on Frat.md"""
@@ -159,8 +159,8 @@ class Command(BaseCommand):
             "Cerdon",
         ]
 
-        for i, name in enumerate(appellations):
-            Appellation.objects.get_or_create(name=name, defaults={"order": i})
+        for name in appellations:
+            Appellation.objects.get_or_create(name=name)
 
     def create_references(self):
         """Create wine references based on Frat.md data"""

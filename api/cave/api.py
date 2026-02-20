@@ -266,18 +266,6 @@ def create_category(request, category_in: CategoryIn):
     return {"name": category.name, "created": created}
 
 
-class CategoryOrderIn(ninja.Schema):
-    categories: List[str]  # List of category names in desired order
-
-
-@api.put("/categories/order")
-def update_category_order(request, order_in: CategoryOrderIn):
-    """Update the order of categories"""
-    for index, category_name in enumerate(order_in.categories):
-        Category.objects.filter(name=category_name).update(order=index)
-    return {"success": True}
-
-
 @api.get("/regions", response=List[str])
 def list_regions(request):
     """Get all regions"""
@@ -295,18 +283,6 @@ def create_region(request, region_in: RegionIn):
     return {"name": region.name, "created": created}
 
 
-class RegionOrderIn(ninja.Schema):
-    regions: List[str]  # List of region names in desired order
-
-
-@api.put("/regions/order")
-def update_region_order(request, order_in: RegionOrderIn):
-    """Update the order of regions"""
-    for index, region_name in enumerate(order_in.regions):
-        Region.objects.filter(name=region_name).update(order=index)
-    return {"success": True}
-
-
 @api.get("/appellations", response=List[str])
 def list_appellations(request):
     """Get all appellations"""
@@ -322,57 +298,6 @@ def create_appellation(request, appellation_in: AppellationIn):
     """Create a new appellation"""
     appellation, created = Appellation.objects.get_or_create(name=appellation_in.name)
     return {"name": appellation.name, "created": created}
-
-
-class AppellationOrderIn(ninja.Schema):
-    appellations: List[str]  # List of appellation names in desired order
-
-
-@api.put("/appellations/order")
-def update_appellation_order(request, order_in: AppellationOrderIn):
-    """Update the order of appellations"""
-    for index, appellation_name in enumerate(order_in.appellations):
-        Appellation.objects.filter(name=appellation_name).update(order=index)
-    return {"success": True}
-
-
-class NestedOrderItem(ninja.Schema):
-    type: str  # "category", "region", or "appellation"
-    name: str
-    parent: Optional[str] = (
-        None  # category name if this is a region, region name if this is an appellation
-    )
-
-
-class NestedOrderIn(ninja.Schema):
-    items: List[NestedOrderItem]
-
-
-@api.put("/menu/order")
-def update_nested_menu_order(request, order_in: NestedOrderIn):
-    """Update the nested order of categories, regions, and appellations"""
-    category_order = 0
-    region_order = 0
-    appellation_order = 0
-
-    for item in order_in.items:
-        if item.type == "category":
-            # Update category order
-            Category.objects.filter(name=item.name).update(order=category_order)
-            category_order += 1
-            region_order = 0  # Reset region order for new category
-            appellation_order = 0  # Reset appellation order for new category
-        elif item.type == "region":
-            # Update region order within the current category
-            Region.objects.filter(name=item.name).update(order=region_order)
-            region_order += 1
-            appellation_order = 0  # Reset appellation order for new region
-        elif item.type == "appellation":
-            # Update appellation order within the current region
-            Appellation.objects.filter(name=item.name).update(order=appellation_order)
-            appellation_order += 1
-
-    return {"success": True}
 
 
 class CategoryColorIn(ninja.Schema):
@@ -400,125 +325,6 @@ def update_reference_quantity(request, sqid: str, quantity_in: QuantityUpdateIn)
     return {"success": True, "quantity": reference.current_quantity}
 
 
-@api.get("/menu/structure")
-def get_menu_structure(request):
-    """Get the current menu structure with categories, regions, and appellations"""
-    # Get all categories, regions, appellations with their wines
-    categories = Category.objects.all()
-    regions = Region.objects.all()
-    appellations = Appellation.objects.all()
-    references = Reference.objects.select_related(
-        "category", "region", "appellation"
-    ).all()
-
-    # Build structure showing which regions and appellations have wines in each category
-    structure = []
-
-    for category in categories:
-        category_item = {
-            "type": "category",
-            "name": category.name,
-            "order": category.order,
-            "color": category.color,
-        }
-        structure.append(category_item)
-
-        # Find regions that have wines in this category
-        category_regions = set()
-        for ref in references:
-            if ref.category and ref.category.name == category.name and ref.region:
-                category_regions.add(ref.region.name)
-
-        # Add regions in order
-        for region in regions:
-            if region.name in category_regions:
-                structure.append(
-                    {
-                        "type": "region",
-                        "name": region.name,
-                        "parent": category.name,
-                        "order": region.order,
-                    }
-                )
-
-                # Find appellations that have wines in this category and region
-                region_appellations = set()
-                for ref in references:
-                    if (
-                        ref.category
-                        and ref.category.name == category.name
-                        and ref.region
-                        and ref.region.name == region.name
-                        and ref.appellation
-                    ):
-                        region_appellations.add(ref.appellation.name)
-
-                # Add appellations in order
-                for appellation in appellations:
-                    if appellation.name in region_appellations:
-                        structure.append(
-                            {
-                                "type": "appellation",
-                                "name": appellation.name,
-                                "parent": region.name,
-                                "order": appellation.order,
-                            }
-                        )
-
-    # Add "Other Selections" category
-    other_refs = [ref for ref in references if not ref.category]
-    if other_refs:
-        structure.append(
-            {
-                "type": "category",
-                "name": "Other Selections",
-                "order": 999,
-                "color": "#666666",
-            }
-        )
-
-        # Add regions in Other Selections
-        other_regions = set()
-        for ref in other_refs:
-            if ref.region:
-                other_regions.add(ref.region.name)
-
-        for region in regions:
-            if region.name in other_regions:
-                structure.append(
-                    {
-                        "type": "region",
-                        "name": region.name,
-                        "parent": "Other Selections",
-                        "order": region.order,
-                    }
-                )
-
-                # Find appellations in this region for Other Selections
-                other_region_appellations = set()
-                for ref in other_refs:
-                    if (
-                        ref.region
-                        and ref.region.name == region.name
-                        and ref.appellation
-                    ):
-                        other_region_appellations.add(ref.appellation.name)
-
-                # Add appellations in order
-                for appellation in appellations:
-                    if appellation.name in other_region_appellations:
-                        structure.append(
-                            {
-                                "type": "appellation",
-                                "name": appellation.name,
-                                "parent": region.name,
-                                "order": appellation.order,
-                            }
-                        )
-
-    return {"structure": structure}
-
-
 class MenuTemplateIn(ninja.Schema):
     content: str
 
@@ -539,9 +345,9 @@ def save_menu_template(request, payload: MenuTemplateIn):
 @api.get("/menu/template/generate")
 def generate_menu_template(request):
     """Generate a template from current data"""
-    categories = Category.objects.all().order_by("order", "name")
-    regions = Region.objects.all().order_by("order", "name")
-    appellations = Appellation.objects.all().order_by("order", "name")
+    categories = Category.objects.all()
+    regions = Region.objects.all()
+    appellations = Appellation.objects.all()
     references = Reference.objects.filter(hidden_from_menu=False).select_related(
         "category", "region", "appellation"
     )

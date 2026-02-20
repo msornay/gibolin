@@ -526,10 +526,10 @@ class MenuTemplateAPITest(TestCase):
     def test_generate_menu_template(self):
         """Test generating menu template from existing data"""
         # Create categories, regions, appellations with references
-        cat_rouge = Category.objects.create(name="Rouge", order=0)
-        cat_blanc = Category.objects.create(name="Blanc", order=1)
-        region = Region.objects.create(name="Bourgogne", order=0)
-        appellation = Appellation.objects.create(name="Côte de Nuits", order=0)
+        cat_rouge = Category.objects.create(name="Rouge")
+        cat_blanc = Category.objects.create(name="Blanc")
+        region = Region.objects.create(name="Bourgogne")
+        appellation = Appellation.objects.create(name="Côte de Nuits")
 
         # Create visible references to include items in template
         Reference.objects.create(

@@ -1,7 +1,5 @@
 # TODO
 
-- Simplify menu ordering: drop the `order` integer fields from Category/Region/Appellation and the related endpoints (`/categories/order`, `/regions/order`, `/appellations/order`, `/menu/order`), making the `MenuTemplate` text the single source of truth for menu order
-
 ## Clever Cloud deployment
 
 - Make `settings.py` production-ready: read `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` from env vars (keep dev defaults for local). Map Clever Cloud's `POSTGRESQL_ADDON_*` env vars with fallback to current `POSTGRES_*` vars.
