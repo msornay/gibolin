@@ -4,3 +4,4 @@ django-ninja==1.2.2
 django-cors-headers==4.4.0
 psycopg2==2.9.9
 sqids==0.4.1
+whitenoise==6.7.0

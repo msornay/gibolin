@@ -54,6 +54,7 @@ CORS_ALLOWED_ORIGINS = os.getenv(
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -136,6 +137,7 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = "static"
+STATICFILES_DIRS = [BASE_DIR / ".." / "ui" / "dist"]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
