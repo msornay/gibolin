@@ -21,12 +21,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-lduej(vrbvcf&vjb2w3fk^3_tkz=l-lt4e!p2+@b&ut)7mipl6"
+SECRET_KEY = os.getenv(
+    "SECRET_KEY", "django-insecure-lduej(vrbvcf&vjb2w3fk^3_tkz=l-lt4e!p2+@b&ut)7mipl6"
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "true").lower() in ("true", "1", "yes")
 
-ALLOWED_HOSTS = ["localhost", "api"]
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,api").split(",")
 
 
 # Application definition
@@ -87,11 +89,11 @@ WSGI_APPLICATION = "gibolin.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("POSTGRES_DB", default="gibolin"),
-        "USER": os.getenv("POSTGRES_USER", default="gibolin"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD", default="gibolin"),
-        "HOST": os.getenv("POSTGRES_HOST", default="postgres"),
-        "PORT": os.getenv("POSTGRES_PORT", default="5432"),
+        "NAME": os.getenv("POSTGRESQL_ADDON_DB", os.getenv("POSTGRES_DB", "gibolin")),
+        "USER": os.getenv("POSTGRESQL_ADDON_USER", os.getenv("POSTGRES_USER", "gibolin")),
+        "PASSWORD": os.getenv("POSTGRESQL_ADDON_PASSWORD", os.getenv("POSTGRES_PASSWORD", "gibolin")),
+        "HOST": os.getenv("POSTGRESQL_ADDON_HOST", os.getenv("POSTGRES_HOST", "postgres")),
+        "PORT": os.getenv("POSTGRESQL_ADDON_PORT", os.getenv("POSTGRES_PORT", "5432")),
     }
 }
 
