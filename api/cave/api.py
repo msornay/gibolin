@@ -74,7 +74,7 @@ class ReferenceIn(ninja.Schema):
     hidden_from_menu: Optional[bool] = False
 
     class Config:
-        extra = "forbid"  # XXX(msy) to test
+        extra = "forbid"
 
 
 class PurchaseIn(ninja.Schema):
