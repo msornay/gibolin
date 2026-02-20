@@ -1,6 +1,5 @@
 # TODO
 
-- Remove Playwright tests
 - Fix quantity button width in the quick action column (`ui/src/index.tsx`) — it's not fixed-width, looks inconsistent across rows
 - Simplify menu ordering: drop the `order` integer fields from Category/Region/Appellation and the related endpoints (`/categories/order`, `/regions/order`, `/appellations/order`, `/menu/order`), making the `MenuTemplate` text the single source of truth for menu order
 
