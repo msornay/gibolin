@@ -1,7 +1,6 @@
 # TODO
 
 - Simplify menu ordering: drop the `order` integer fields from Category/Region/Appellation and the related endpoints (`/categories/order`, `/regions/order`, `/appellations/order`, `/menu/order`), making the `MenuTemplate` text the single source of truth for menu order
-- Add a Makefile target to spin up the platform locally
 
 ## Clever Cloud deployment
 

@@ -1,8 +1,13 @@
-.PHONY: test test-api test-ui seed-db reset-with-data
+.PHONY: up down lint test test-api test-ui seed-db reset reset-with-data
+
+up:
+	docker-compose up
+
+down:
+	docker-compose down
 
 lint:
 	docker-compose run --rm api ruff check
-
 
 test: test-api test-ui
 
