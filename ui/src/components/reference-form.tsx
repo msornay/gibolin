@@ -50,33 +50,41 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   // Fetch categories
   const { data: categories, refetch: refetchCategories } = useQuery({
     queryKey: ['categories'],
-    queryFn: () => 
-      fetch(`${API_BASE_URL}/api/categories`).then(res => res.json()),
+    queryFn: () =>
+      fetch(`${API_BASE_URL}/api/categories`, { cache: 'no-store' }).then(res => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      }),
   });
 
   // Fetch regions
   const { data: regions, refetch: refetchRegions } = useQuery({
     queryKey: ['regions'],
-    queryFn: () => 
-      fetch(`${API_BASE_URL}/api/regions`).then(res => res.json()),
+    queryFn: () =>
+      fetch(`${API_BASE_URL}/api/regions`, { cache: 'no-store' }).then(res => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      }),
   });
 
   // Fetch appellations
   const { data: appellations, refetch: refetchAppellations } = useQuery({
     queryKey: ['appellations'],
-    queryFn: () => 
-      fetch(`${API_BASE_URL}/api/appellations`).then(res => res.json()),
+    queryFn: () =>
+      fetch(`${API_BASE_URL}/api/appellations`, { cache: 'no-store' }).then(res => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      }),
   });
-
-
 
   // Fetch reference data for editing
   const { data: referenceData } = useQuery({
     queryKey: ["reference", reference?.sqid],
     queryFn: () =>
-      fetch(`${API_BASE_URL}/api/ref/${reference?.sqid}`).then((res) =>
-        res.json(),
-      ),
+      fetch(`${API_BASE_URL}/api/ref/${reference?.sqid}`, { cache: 'no-store' }).then(res => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      }),
     enabled: reference !== null,
   });
 

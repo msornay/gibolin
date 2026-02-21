@@ -69,7 +69,9 @@ const fetchReferences = async (
     `${API_BASE_URL}/api/refs?offset=${(page - 1) * limit}&limit=${limit}${
       search ? `&search=${search}` : ""
     }`,
+    { cache: 'no-store' },
   );
+  if (!response.ok) throw new Error(`${response.status}`);
   return await response.json();
 };
 
@@ -150,22 +152,32 @@ function ReferenceTable() {
   // Fetch categories
   const { data: categories } = useQuery({
     queryKey: ["categories"],
-    queryFn: () => 
-      fetch(`${API_BASE_URL}/api/categories`).then(res => res.json()),
+    queryFn: () =>
+      fetch(`${API_BASE_URL}/api/categories`, { cache: 'no-store' }).then(res => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      }),
   });
 
   // Fetch menu template when export modal opens
   const { data: templateData } = useQuery({
     queryKey: ["menuTemplate"],
     queryFn: () =>
-      fetch(`${API_BASE_URL}/api/menu/template`).then(res => res.json()),
+      fetch(`${API_BASE_URL}/api/menu/template`, { cache: 'no-store' }).then(res => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      }),
     enabled: isExportModalOpen,
   });
 
   // Fetch stats when modal opens
   const { data: stats } = useQuery({
     queryKey: ["stats"],
-    queryFn: () => fetch(`${API_BASE_URL}/api/stats`).then(res => res.json()),
+    queryFn: () =>
+      fetch(`${API_BASE_URL}/api/stats`, { cache: 'no-store' }).then(res => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      }),
     enabled: isStatsModalOpen,
   });
 
@@ -231,7 +243,8 @@ function ReferenceTable() {
 
   // Handle generate template from current data
   const handleGenerateTemplate = React.useCallback(async () => {
-    const response = await fetch(`${API_BASE_URL}/api/menu/template/generate`);
+    const response = await fetch(`${API_BASE_URL}/api/menu/template/generate`, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`${response.status}`);
     const data = await response.json();
     setMenuTemplate(data.content);
   }, []);
