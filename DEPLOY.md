@@ -1,6 +1,6 @@
 # Deploying to Clever Cloud
 
-These are the human-only steps. Code changes (settings, whitenoise, gunicorn, etc.) must be done first — see TODO.md.
+These are the human-only steps. Code changes (settings, whitenoise, gunicorn, etc.) are already in place.
 
 ## 1. Create the app
 
