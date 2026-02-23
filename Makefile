@@ -1,4 +1,4 @@
-.PHONY: up down lint test test-api test-ui seed-db reset reset-with-data
+.PHONY: up down lint test test-api test-ui seed-db reset reset-with-data deploy
 
 up:
 	docker-compose up
@@ -28,3 +28,6 @@ reset-with-data: reset
 	sleep 5
 	docker-compose run --rm api python manage.py migrate
 	docker-compose run --rm api python manage.py load_test_data --clear
+
+deploy:
+	clever deploy
