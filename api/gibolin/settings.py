@@ -140,8 +140,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = "static/"
-STATIC_ROOT = "static"
-STATICFILES_DIRS = [BASE_DIR / ".." / "ui" / "dist"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Vite builds frontend assets with root-relative paths (/assets/...).
+# WHITENOISE_ROOT serves them at the root URL path, matching what the HTML expects.
+WHITENOISE_ROOT = str(BASE_DIR / ".." / "ui" / "dist")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

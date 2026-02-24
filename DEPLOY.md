@@ -25,9 +25,10 @@ This injects `POSTGRESQL_ADDON_HOST`, `POSTGRESQL_ADDON_PORT`, `POSTGRESQL_ADDON
 clever env set SECRET_KEY "$(python3 -c 'import secrets; print(secrets.token_urlsafe(50))')"
 clever env set DEBUG "false"
 clever env set ALLOWED_HOSTS "gibolin.cleverapps.io"
-clever env set CC_PYTHON_MODULE "gibolin.wsgi:application"
 clever env set CC_PRE_BUILD_HOOK "cd ui && npm install && npm run build"
 ```
+
+`CC_PYTHON_MODULE` is already set in `clevercloud/python.json` — no need to set it as an env var.
 
 Adjust `ALLOWED_HOSTS` if using a custom domain.
 
