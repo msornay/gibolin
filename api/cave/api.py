@@ -466,16 +466,84 @@ def delete_purchase(request, purchase_id: int):
     return {}
 
 
+def _build_wine_data(wine):
+    """Build a wine dict for the menu template."""
+    details = []
+    if wine.domain:
+        details.append(wine.domain)
+    if wine.vintage:
+        details.append(str(wine.vintage))
+    return {
+        "name": wine.name,
+        "details": " \u2022 ".join(details) if details else None,
+        "price": _compute_retail_price(wine),
+    }
+
+
+def _build_appellation_list(wines, sorted_appellations):
+    """Group wines by appellation and return sorted appellation dicts."""
+    groups = {}
+    for wine in wines:
+        key = wine.appellation.name if wine.appellation else "No Appellation"
+        groups.setdefault(key, []).append(wine)
+
+    result = []
+    for appellation in sorted_appellations:
+        if appellation.name in groups:
+            sorted_wines = sorted(groups[appellation.name], key=lambda x: x.name or "")
+            result.append({
+                "name": appellation.name,
+                "wines": [_build_wine_data(w) for w in sorted_wines],
+            })
+
+    if "No Appellation" in groups:
+        sorted_wines = sorted(groups["No Appellation"], key=lambda x: x.name or "")
+        result.append({
+            "name": "No Appellation",
+            "wines": [_build_wine_data(w) for w in sorted_wines],
+        })
+
+    return result
+
+
+def _build_region_list(wines, sorted_regions, sorted_appellations):
+    """Group wines by region and return sorted region dicts."""
+    groups = {}
+    for wine in wines:
+        key = wine.region.name if wine.region else "No Region"
+        groups.setdefault(key, []).append(wine)
+
+    result = []
+    for region in sorted_regions:
+        if region.name in groups:
+            result.append({
+                "name": region.name,
+                "has_wines": True,
+                "appellations": _build_appellation_list(
+                    groups[region.name], sorted_appellations
+                ),
+            })
+
+    if "No Region" in groups:
+        result.append({
+            "name": "No Region",
+            "has_wines": True,
+            "appellations": _build_appellation_list(
+                groups["No Region"], sorted_appellations
+            ),
+        })
+
+    return result
+
+
 @api.get("/export/html")
 def export_wine_menu_html(request):
-    """Generate HTML wine menu for printing using Jinja template"""
+    """Generate HTML wine menu for printing using Django template"""
 
-    # Get visible references with their categories, regions, and appellations
     references = Reference.objects.filter(hidden_from_menu=False).select_related(
         "category", "region", "appellation"
     )
 
-    # Parse template for ordering
     template_content = MenuTemplate.get_template()
     cat_order, reg_order, app_order = _parse_menu_template(template_content)
 
@@ -486,336 +554,29 @@ def export_wine_menu_html(request):
             return (0, order_dict[name], name)
         return (1, 0, name)
 
-    # Get categories, regions, and appellations sorted by template then alphabetically
     categories = sorted(Category.objects.all(), key=lambda x: sort_key(x, cat_order))
     regions = sorted(Region.objects.all(), key=lambda x: sort_key(x, reg_order))
     appellations = sorted(Appellation.objects.all(), key=lambda x: sort_key(x, app_order))
 
-    # Create nested structure for the template
     template_categories = []
 
-    # Build regular categories first
     for category in categories:
-        category_data = {
+        category_wines = [ref for ref in references if ref.category == category]
+        template_categories.append({
             "name": category.name,
             "color": category.color,
-            "has_wines": False,
-            "regions": [],
-        }
+            "has_wines": bool(category_wines),
+            "regions": _build_region_list(category_wines, regions, appellations),
+        })
 
-        # Get wines for this category
-        category_wines = [ref for ref in references if ref.category == category]
-
-        if category_wines:
-            category_data["has_wines"] = True
-
-            # Group wines by region
-            region_groups = {}
-            for wine in category_wines:
-                region_name = wine.region.name if wine.region else "No Region"
-                if region_name not in region_groups:
-                    region_groups[region_name] = []
-                region_groups[region_name].append(wine)
-
-            # Build region data
-            for region in regions:
-                if region.name in region_groups:
-                    region_data = {
-                        "name": region.name,
-                        "has_wines": True,
-                        "appellations": [],
-                    }
-
-                    # Group region wines by appellation
-                    appellation_groups = {}
-                    for wine in region_groups[region.name]:
-                        appellation_name = (
-                            wine.appellation.name
-                            if wine.appellation
-                            else "No Appellation"
-                        )
-                        if appellation_name not in appellation_groups:
-                            appellation_groups[appellation_name] = []
-                        appellation_groups[appellation_name].append(wine)
-
-                    # Build appellation data
-                    for appellation in appellations:
-                        if appellation.name in appellation_groups:
-                            appellation_data = {"name": appellation.name, "wines": []}
-
-                            # Sort wines and build wine data
-                            sorted_wines = sorted(
-                                appellation_groups[appellation.name],
-                                key=lambda x: x.name or "",
-                            )
-                            for wine in sorted_wines:
-                                wine_data = {"name": wine.name, "details": None, "price": _compute_retail_price(wine)}
-
-                                # Build details string
-                                details = []
-                                if wine.domain:
-                                    details.append(wine.domain)
-                                if wine.vintage:
-                                    details.append(str(wine.vintage))
-
-                                if details:
-                                    wine_data["details"] = " • ".join(details)
-
-                                appellation_data["wines"].append(wine_data)
-
-                            region_data["appellations"].append(appellation_data)
-
-                    # Handle wines without appellation
-                    if "No Appellation" in appellation_groups:
-                        appellation_data = {"name": "No Appellation", "wines": []}
-
-                        sorted_wines = sorted(
-                            appellation_groups["No Appellation"],
-                            key=lambda x: x.name or "",
-                        )
-                        for wine in sorted_wines:
-                            wine_data = {"name": wine.name, "details": None, "price": _compute_retail_price(wine)}
-
-                            details = []
-                            if wine.domain:
-                                details.append(wine.domain)
-                            if wine.vintage:
-                                details.append(str(wine.vintage))
-
-                            if details:
-                                wine_data["details"] = " • ".join(details)
-
-                            appellation_data["wines"].append(wine_data)
-
-                        region_data["appellations"].append(appellation_data)
-
-                    category_data["regions"].append(region_data)
-
-            # Handle wines without region
-            if "No Region" in region_groups:
-                region_data = {
-                    "name": "No Region",
-                    "has_wines": True,
-                    "appellations": [],
-                }
-
-                # Group no-region wines by appellation
-                appellation_groups = {}
-                for wine in region_groups["No Region"]:
-                    appellation_name = (
-                        wine.appellation.name if wine.appellation else "No Appellation"
-                    )
-                    if appellation_name not in appellation_groups:
-                        appellation_groups[appellation_name] = []
-                    appellation_groups[appellation_name].append(wine)
-
-                # Build appellation data for no-region wines
-                for appellation in appellations:
-                    if appellation.name in appellation_groups:
-                        appellation_data = {"name": appellation.name, "wines": []}
-
-                        sorted_wines = sorted(
-                            appellation_groups[appellation.name],
-                            key=lambda x: x.name or "",
-                        )
-                        for wine in sorted_wines:
-                            wine_data = {"name": wine.name, "details": None, "price": _compute_retail_price(wine)}
-
-                            details = []
-                            if wine.domain:
-                                details.append(wine.domain)
-                            if wine.vintage:
-                                details.append(str(wine.vintage))
-
-                            if details:
-                                wine_data["details"] = " • ".join(details)
-
-                            appellation_data["wines"].append(wine_data)
-
-                        region_data["appellations"].append(appellation_data)
-
-                # Handle no-region, no-appellation wines
-                if "No Appellation" in appellation_groups:
-                    appellation_data = {"name": "No Appellation", "wines": []}
-
-                    sorted_wines = sorted(
-                        appellation_groups["No Appellation"], key=lambda x: x.name or ""
-                    )
-                    for wine in sorted_wines:
-                        wine_data = {"name": wine.name, "details": None, "price": _compute_retail_price(wine)}
-
-                        details = []
-                        if wine.domain:
-                            details.append(wine.domain)
-                        if wine.vintage:
-                            details.append(str(wine.vintage))
-
-                        if details:
-                            wine_data["details"] = " • ".join(details)
-
-                        appellation_data["wines"].append(wine_data)
-
-                    region_data["appellations"].append(appellation_data)
-
-                category_data["regions"].append(region_data)
-
-        template_categories.append(category_data)
-
-    # Handle wines without category (Other Selections)
     uncategorized_wines = [ref for ref in references if not ref.category]
     if uncategorized_wines:
-        category_data = {
+        template_categories.append({
             "name": "Other Selections",
             "color": "#666666",
             "has_wines": True,
-            "regions": [],
-        }
+            "regions": _build_region_list(uncategorized_wines, regions, appellations),
+        })
 
-        # Group uncategorized wines by region
-        region_groups = {}
-        for wine in uncategorized_wines:
-            region_name = wine.region.name if wine.region else "No Region"
-            if region_name not in region_groups:
-                region_groups[region_name] = []
-            region_groups[region_name].append(wine)
-
-        # Build region data for uncategorized wines
-        for region in regions:
-            if region.name in region_groups:
-                region_data = {
-                    "name": region.name,
-                    "has_wines": True,
-                    "appellations": [],
-                }
-
-                # Group region wines by appellation
-                appellation_groups = {}
-                for wine in region_groups[region.name]:
-                    appellation_name = (
-                        wine.appellation.name if wine.appellation else "No Appellation"
-                    )
-                    if appellation_name not in appellation_groups:
-                        appellation_groups[appellation_name] = []
-                    appellation_groups[appellation_name].append(wine)
-
-                # Build appellation data
-                for appellation in appellations:
-                    if appellation.name in appellation_groups:
-                        appellation_data = {"name": appellation.name, "wines": []}
-
-                        sorted_wines = sorted(
-                            appellation_groups[appellation.name],
-                            key=lambda x: x.name or "",
-                        )
-                        for wine in sorted_wines:
-                            wine_data = {"name": wine.name, "details": None, "price": _compute_retail_price(wine)}
-
-                            details = []
-                            if wine.domain:
-                                details.append(wine.domain)
-                            if wine.vintage:
-                                details.append(str(wine.vintage))
-
-                            if details:
-                                wine_data["details"] = " • ".join(details)
-
-                            appellation_data["wines"].append(wine_data)
-
-                        region_data["appellations"].append(appellation_data)
-
-                # Handle wines without appellation
-                if "No Appellation" in appellation_groups:
-                    appellation_data = {"name": "No Appellation", "wines": []}
-
-                    sorted_wines = sorted(
-                        appellation_groups["No Appellation"], key=lambda x: x.name or ""
-                    )
-                    for wine in sorted_wines:
-                        wine_data = {"name": wine.name, "details": None, "price": _compute_retail_price(wine)}
-
-                        details = []
-                        if wine.domain:
-                            details.append(wine.domain)
-                        if wine.vintage:
-                            details.append(str(wine.vintage))
-
-                        if details:
-                            wine_data["details"] = " • ".join(details)
-
-                        appellation_data["wines"].append(wine_data)
-
-                    region_data["appellations"].append(appellation_data)
-
-                category_data["regions"].append(region_data)
-
-        # Handle uncategorized wines without region
-        if "No Region" in region_groups:
-            region_data = {"name": "No Region", "has_wines": True, "appellations": []}
-
-            # Group no-region wines by appellation
-            appellation_groups = {}
-            for wine in region_groups["No Region"]:
-                appellation_name = (
-                    wine.appellation.name if wine.appellation else "No Appellation"
-                )
-                if appellation_name not in appellation_groups:
-                    appellation_groups[appellation_name] = []
-                appellation_groups[appellation_name].append(wine)
-
-            # Build appellation data for no-region wines
-            for appellation in appellations:
-                if appellation.name in appellation_groups:
-                    appellation_data = {"name": appellation.name, "wines": []}
-
-                    sorted_wines = sorted(
-                        appellation_groups[appellation.name], key=lambda x: x.name or ""
-                    )
-                    for wine in sorted_wines:
-                        wine_data = {"name": wine.name, "details": None, "price": _compute_retail_price(wine)}
-
-                        details = []
-                        if wine.domain:
-                            details.append(wine.domain)
-                        if wine.vintage:
-                            details.append(str(wine.vintage))
-
-                        if details:
-                            wine_data["details"] = " • ".join(details)
-
-                        appellation_data["wines"].append(wine_data)
-
-                    region_data["appellations"].append(appellation_data)
-
-            # Handle no-region, no-appellation wines
-            if "No Appellation" in appellation_groups:
-                appellation_data = {"name": "No Appellation", "wines": []}
-
-                sorted_wines = sorted(
-                    appellation_groups["No Appellation"], key=lambda x: x.name or ""
-                )
-                for wine in sorted_wines:
-                    wine_data = {"name": wine.name, "details": None, "price": _compute_retail_price(wine)}
-
-                    details = []
-                    if wine.domain:
-                        details.append(wine.domain)
-                    if wine.vintage:
-                        details.append(str(wine.vintage))
-
-                    if details:
-                        wine_data["details"] = " • ".join(details)
-
-                    appellation_data["wines"].append(wine_data)
-
-                region_data["appellations"].append(appellation_data)
-
-            category_data["regions"].append(region_data)
-
-        template_categories.append(category_data)
-
-    # Render the template
-    context = {"categories": template_categories}
-
-    html_content = render_to_string("wine_menu.html", context)
-
+    html_content = render_to_string("wine_menu.html", {"categories": template_categories})
     return HttpResponse(html_content, content_type="text/html")
