@@ -926,3 +926,165 @@ class ExportWineMenuHTMLTest(TestCase):
         content = response.content.decode()
         # Override 42 should be used, not computed 30
         self.assertIn("\u20ac42", content)
+
+
+class ReferenceLocationModelTest(TestCase):
+    def test_create_with_location(self):
+        """Test creating a reference with a location"""
+        ref = Reference.objects.create(
+            name="Located Wine", location="Maison principale"
+        )
+        self.assertEqual(ref.location, "Maison principale")
+
+    def test_create_without_location(self):
+        """Test creating a reference without location (null)"""
+        ref = Reference.objects.create(name="No Location Wine")
+        self.assertIsNone(ref.location)
+
+
+class ReferenceLocationAPITest(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_create_with_location(self):
+        """Test creating a reference with location via API"""
+        data = {
+            "name": "Wine With Location",
+            "location": "Maison principale",
+        }
+        response = self.client.post(
+            "/api/ref", json.dumps(data), content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+        ref = Reference.objects.get(name="Wine With Location")
+        self.assertEqual(ref.location, "Maison principale")
+
+    def test_update_location(self):
+        """Test updating a reference's location"""
+        ref = Reference.objects.create(name="Test Wine", location="Old Location")
+        sqid = sqid_encode(ref.id)
+        data = {"name": "Test Wine", "location": "New Location"}
+        response = self.client.put(
+            f"/api/ref/{sqid}", json.dumps(data), content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+        ref.refresh_from_db()
+        self.assertEqual(ref.location, "New Location")
+
+    def test_get_returns_location(self):
+        """Test that GET /api/ref/{sqid} returns location"""
+        ref = Reference.objects.create(
+            name="Test Wine", location="Résidence secondaire"
+        )
+        sqid = sqid_encode(ref.id)
+        response = self.client.get(f"/api/ref/{sqid}")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["location"], "Résidence secondaire")
+
+    def test_list_with_location_filter(self):
+        """Test filtering references by location"""
+        Reference.objects.create(name="Wine A", location="Maison principale")
+        Reference.objects.create(name="Wine B", location="Résidence secondaire")
+        Reference.objects.create(name="Wine C", location="Maison principale")
+
+        response = self.client.get(
+            "/api/refs?location=Maison%20principale"
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["count"], 2)
+        names = {item["name"] for item in data["items"]}
+        self.assertEqual(names, {"Wine A", "Wine C"})
+
+    def test_list_without_location_filter_returns_all(self):
+        """Test that omitting location filter returns all references"""
+        Reference.objects.create(name="Wine A", location="Maison principale")
+        Reference.objects.create(name="Wine B", location="Résidence secondaire")
+        Reference.objects.create(name="Wine C")
+
+        response = self.client.get("/api/refs")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["count"], 3)
+
+    def test_search_matches_location(self):
+        """Test that search covers the location field"""
+        Reference.objects.create(name="Wine A", location="Maison principale")
+        Reference.objects.create(name="Wine B", location="Résidence secondaire")
+
+        response = self.client.get("/api/refs?search=principale")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["count"], 1)
+        self.assertEqual(data["items"][0]["name"], "Wine A")
+
+
+class LocationAPITest(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_empty_db_returns_empty_list(self):
+        """Test GET /api/locations with no references returns []"""
+        response = self.client.get("/api/locations")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), [])
+
+    def test_returns_distinct_values(self):
+        """Test that locations returns distinct non-empty values"""
+        Reference.objects.create(name="Wine A", location="Maison principale")
+        Reference.objects.create(name="Wine B", location="Maison principale")
+        Reference.objects.create(name="Wine C", location="Résidence secondaire")
+        Reference.objects.create(name="Wine D")  # null location
+        Reference.objects.create(name="Wine E", location="")  # empty location
+
+        response = self.client.get("/api/locations")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data), 2)
+
+    def test_returns_sorted_alphabetically(self):
+        """Test that locations are sorted alphabetically"""
+        Reference.objects.create(name="Wine A", location="Résidence secondaire")
+        Reference.objects.create(name="Wine B", location="Maison principale")
+
+        response = self.client.get("/api/locations")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data, ["Maison principale", "Résidence secondaire"])
+
+
+class ExportWineMenuLocationFilterTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.cat = Category.objects.create(name="Rouge")
+
+    def test_export_with_location_filter(self):
+        """Test that location filter shows only matching wines"""
+        Reference.objects.create(
+            name="Wine A", category=self.cat, location="Maison principale"
+        )
+        Reference.objects.create(
+            name="Wine B", category=self.cat, location="Résidence secondaire"
+        )
+        response = self.client.get(
+            "/api/export/html?location=Maison%20principale"
+        )
+        content = response.content.decode()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Wine A", content)
+        self.assertNotIn("Wine B", content)
+
+    def test_export_without_location_filter_shows_all(self):
+        """Test that no location filter shows all wines"""
+        Reference.objects.create(
+            name="Wine A", category=self.cat, location="Maison principale"
+        )
+        Reference.objects.create(
+            name="Wine B", category=self.cat, location="Résidence secondaire"
+        )
+        response = self.client.get("/api/export/html")
+        content = response.content.decode()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Wine A", content)
+        self.assertIn("Wine B", content)

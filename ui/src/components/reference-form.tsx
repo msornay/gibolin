@@ -374,6 +374,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
         region: referenceData.region,
         appellation: referenceData.appellation,
         domain: referenceData.domain,
+        location: referenceData.location,
         vintage: referenceData.vintage,
         current_quantity: referenceData.current_quantity,
         hidden_from_menu: referenceData.hidden_from_menu,
@@ -387,6 +388,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
         region: undefined,
         appellation: undefined,
         domain: "",
+        location: "",
         vintage: new Date().getFullYear(),
         current_quantity: 0,
         hidden_from_menu: false,
@@ -460,6 +462,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
           region: undefined,
           appellation: undefined,
           domain: "",
+          location: "",
           vintage: new Date().getFullYear(),
           current_quantity: 0,
           hidden_from_menu: false,
@@ -642,6 +645,13 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
           name="domain"
         >
           <Input placeholder="Domain" />
+        </Form.Item>
+
+        <Form.Item
+          label="Location"
+          name="location"
+        >
+          <Input placeholder="e.g., Maison principale" />
         </Form.Item>
 
         <Form.Item

@@ -19,7 +19,8 @@ import {
   App as AntApp,
   InputNumber,
   Statistic,
-  Tooltip
+  Tooltip,
+  Select,
 } from "antd";
 import { EditOutlined, PlusOutlined, ExportOutlined, BarChartOutlined, EyeOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -45,6 +46,7 @@ export type Reference = {
   region?: string;
   appellation?: string;
   domain?: string;
+  location?: string;
   vintage?: number;
   current_quantity: number;
   price_multiplier: number;
@@ -64,12 +66,12 @@ const fetchReferences = async (
   page = 1,
   search = "",
   limit = 20,
+  location?: string,
 ): Promise<RefsResponse> => {
-  const response = await fetch(
-    `${API_BASE_URL}/api/refs?offset=${(page - 1) * limit}&limit=${limit}${
-      search ? `&search=${search}` : ""
-    }`,
-  );
+  let url = `${API_BASE_URL}/api/refs?offset=${(page - 1) * limit}&limit=${limit}`;
+  if (search) url += `&search=${encodeURIComponent(search)}`;
+  if (location) url += `&location=${encodeURIComponent(location)}`;
+  const response = await fetch(url);
   return await response.json();
 };
 
@@ -86,6 +88,8 @@ function ReferenceTable() {
   const [menuTemplate, setMenuTemplate] = React.useState<string>("");
   const [editingQuantity, setEditingQuantity] = React.useState<string | null>(null);
   const [quantityValue, setQuantityValue] = React.useState<number>(0);
+  const [selectedLocation, setSelectedLocation] = React.useState<string | undefined>(undefined);
+  const [exportLocation, setExportLocation] = React.useState<string | undefined>(undefined);
   const queryClient = useQueryClient();
 
   const handleSearchChange = React.useCallback((value: string) => {
@@ -118,9 +122,12 @@ function ReferenceTable() {
 
   const handleHtmlExport = React.useCallback(() => {
     // Open HTML export in new window for printing
-    const exportUrl = `${API_BASE_URL}/api/export/html`;
+    let exportUrl = `${API_BASE_URL}/api/export/html`;
+    if (exportLocation) {
+      exportUrl += `?location=${encodeURIComponent(exportLocation)}`;
+    }
     const printWindow = window.open(exportUrl, '_blank');
-    
+
     if (printWindow) {
       // Wait for content to load, then trigger print dialog
       printWindow.onload = () => {
@@ -129,10 +136,10 @@ function ReferenceTable() {
         }, 500);
       };
     }
-    
+
     // Close the modal
     setIsExportModalOpen(false);
-  }, []);
+  }, [exportLocation]);
 
   // Debounce search to prevent excessive API calls
   React.useEffect(() => {
@@ -143,14 +150,21 @@ function ReferenceTable() {
   }, [search]);
 
   const { isLoading, error, data } = useQuery({
-    queryKey: ["references", debouncedSearch, currentPage, pageSize],
-    queryFn: () => fetchReferences(currentPage, debouncedSearch, pageSize),
+    queryKey: ["references", debouncedSearch, currentPage, pageSize, selectedLocation],
+    queryFn: () => fetchReferences(currentPage, debouncedSearch, pageSize, selectedLocation),
+  });
+
+  // Fetch locations
+  const { data: locations } = useQuery({
+    queryKey: ["locations"],
+    queryFn: () =>
+      fetch(`${API_BASE_URL}/api/locations`).then(res => res.json()),
   });
 
   // Fetch categories
   const { data: categories } = useQuery({
     queryKey: ["categories"],
-    queryFn: () => 
+    queryFn: () =>
       fetch(`${API_BASE_URL}/api/categories`).then(res => res.json()),
   });
 
@@ -212,6 +226,7 @@ function ReferenceTable() {
           region: record.region,
           appellation: record.appellation,
           domain: record.domain,
+          location: record.location,
           vintage: record.vintage,
           current_quantity: record.current_quantity,
           price_multiplier: record.price_multiplier,
@@ -298,6 +313,17 @@ function ReferenceTable() {
         return aVal.toLowerCase().localeCompare(bVal.toLowerCase());
       },
       render: (domain) => domain || "-",
+    },
+    {
+      title: "Location",
+      dataIndex: "location",
+      key: "location",
+      sorter: (a, b) => {
+        const aVal = a.location || "";
+        const bVal = b.location || "";
+        return aVal.toLowerCase().localeCompare(bVal.toLowerCase());
+      },
+      render: (location) => location || "-",
     },
     {
       title: "Vintage",
@@ -419,6 +445,17 @@ function ReferenceTable() {
           onChange={(e) => handleSearchChange(e.target.value)}
           style={{ width: 250 }}
         />
+        <Select
+          placeholder="All locations"
+          allowClear
+          value={selectedLocation}
+          onChange={(value) => {
+            setSelectedLocation(value);
+            setCurrentPage(1);
+          }}
+          options={(locations as string[] | undefined)?.map((loc: string) => ({ value: loc, label: loc }))}
+          style={{ width: 200 }}
+        />
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -486,6 +523,20 @@ function ReferenceTable() {
         ]}
         width={600}
       >
+        <div style={{ marginBottom: '16px' }}>
+          <Typography.Text strong>Location Filter</Typography.Text>
+          <div style={{ marginTop: '4px' }}>
+            <Select
+              placeholder="All locations"
+              allowClear
+              value={exportLocation}
+              onChange={setExportLocation}
+              options={(locations as string[] | undefined)?.map((loc: string) => ({ value: loc, label: loc }))}
+              style={{ width: '100%' }}
+            />
+          </div>
+        </div>
+
         <div style={{ marginBottom: '16px' }}>
           <Typography.Text strong>Menu Template</Typography.Text>
           <Typography.Paragraph type="secondary" style={{ marginTop: '4px' }}>

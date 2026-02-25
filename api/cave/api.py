@@ -67,6 +67,7 @@ class ReferenceIn(ninja.Schema):
     region: Optional[str] = None
     appellation: Optional[str] = None
     domain: Optional[str] = None
+    location: Optional[str] = None
     vintage: Optional[int] = None
     current_quantity: Optional[int] = 0
     price_multiplier: Optional[float] = 3.00
@@ -115,6 +116,7 @@ class ReferenceOut(ninja.Schema):
     region: Optional[str]
     appellation: Optional[str]
     domain: Optional[str]
+    location: Optional[str]
     vintage: Optional[int]
     current_quantity: int
     price_multiplier: float
@@ -229,6 +231,7 @@ def _search_word(word):
     return (
         Q(name__unaccent__icontains=word) |
         Q(domain__unaccent__icontains=word) |
+        Q(location__unaccent__icontains=word) |
         Q(category__name__unaccent__icontains=word) |
         Q(region__name__unaccent__icontains=word) |
         Q(appellation__name__unaccent__icontains=word)
@@ -237,16 +240,33 @@ def _search_word(word):
 
 @api.get("/refs", response=List[ReferenceOut])
 @ninja_paginate
-def list_reference(request, search: str = None):
+def list_reference(request, search: str = None, location: str = None):
+    qs = Reference.objects.all()
+
+    if location:
+        qs = qs.filter(location=location)
+
     if not search:
-        return Reference.objects.all()
+        return qs
 
     words = search.split()
     query = _search_word(words[0])
     for word in words[1:]:
         query &= _search_word(word)
 
-    return Reference.objects.filter(query).distinct()
+    return qs.filter(query).distinct()
+
+
+@api.get("/locations", response=List[str])
+def list_locations(request):
+    """Get distinct non-empty location values, sorted alphabetically"""
+    return list(
+        Reference.objects.exclude(location__isnull=True)
+        .exclude(location="")
+        .order_by("location")
+        .values_list("location", flat=True)
+        .distinct()
+    )
 
 
 @api.get("/categories", response=List[str])
@@ -537,12 +557,15 @@ def _build_region_list(wines, sorted_regions, sorted_appellations):
 
 
 @api.get("/export/html")
-def export_wine_menu_html(request):
+def export_wine_menu_html(request, location: str = None):
     """Generate HTML wine menu for printing using Django template"""
 
     references = Reference.objects.filter(hidden_from_menu=False).select_related(
         "category", "region", "appellation"
     )
+
+    if location:
+        references = references.filter(location=location)
 
     template_content = MenuTemplate.get_template()
     cat_order, reg_order, app_order = _parse_menu_template(template_content)

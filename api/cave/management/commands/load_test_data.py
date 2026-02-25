@@ -162,6 +162,17 @@ class Command(BaseCommand):
         for name in appellations:
             Appellation.objects.get_or_create(name=name)
 
+    @staticmethod
+    def _location_for_region(region_name):
+        """Map region to a location value for seed data."""
+        local_regions = {
+            "Mâcon", "Bourgogne", "Beaujolais", "Jura", "Bugey",
+            "Savoie", "Alsace",
+        }
+        if region_name in local_regions:
+            return "Maison principale"
+        return "Résidence secondaire"
+
     def create_references(self):
         """Create wine references based on Frat.md data"""
         # Get created objects
@@ -1243,6 +1254,7 @@ class Command(BaseCommand):
                     "appellation": appellations.get(appellation_name),
                     "vintage": vintage,
                     "current_quantity": 10,
+                    "location": self._location_for_region(region_name),
                 },
             )
 
