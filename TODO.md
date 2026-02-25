@@ -96,8 +96,20 @@ Goal: Google login for friends-only access. Admin pre-creates User records with 
 ### Clever Cloud env vars (`DEPLOY.md`)
 - Document: `OIDC_RP_CLIENT_ID` and `OIDC_RP_CLIENT_SECRET` must be set via `clever env set`
 
+### Local dev setup
+- Add `OIDC_RP_CLIENT_ID` and `OIDC_RP_CLIENT_SECRET` env vars to `api` service in `docker-compose.yml` (can default to empty or use a `.env` file)
+- In `settings.py`, when `DEBUG=True` and OIDC client ID is not set, disable OIDC auth: skip `SessionRefresh` middleware, use a `DevAutoLoginMiddleware` that auto-authenticates as a default dev user (created by `load_test_data.py`)
+- Add a dev user to `load_test_data.py` so `make seed-db` creates a usable account for local dev
+- Document in README: for local dev, auth is bypassed automatically; to test OIDC locally, set `OIDC_RP_CLIENT_ID`/`OIDC_RP_CLIENT_SECRET` in docker-compose env or `.env`
+
+### Test migration
+- All existing API tests use `self.client` with no auth. After adding `NinjaAPI(auth=SessionAuth())`, every test that hits the API will get 401.
+- Add a `setUp` pattern: create a test user and call `self.client.force_login(user)` in every API test class `setUp`. Or use a base test class `AuthenticatedTestCase` that does this, and have all API test classes inherit from it.
+- Healthcheck test should verify it works WITHOUT `force_login`.
+
 ### Tests
 - Test custom OIDC backend: known email returns existing user, unknown email returns None (rejected)
 - Test API endpoints return 401 when unauthenticated
 - Test API endpoints return 200 when session is active (use `self.client.force_login(user)`)
 - Test healthcheck is exempt from auth
+- Test `DevAutoLoginMiddleware` auto-authenticates when `DEBUG=True` and OIDC is not configured
