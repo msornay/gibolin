@@ -1,9 +1,17 @@
+from django.conf import settings
 from django.db import models
 
 
 class Category(models.Model):
     name = models.CharField(max_length=255, unique=True)
     color = models.CharField(max_length=7, default="#000000")  # Hex color code
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="categories",
+    )
 
     class Meta:
         verbose_name_plural = "categories"
@@ -15,6 +23,13 @@ class Category(models.Model):
 
 class Region(models.Model):
     name = models.CharField(max_length=255, unique=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="regions",
+    )
 
     class Meta:
         verbose_name_plural = "regions"
@@ -26,6 +41,13 @@ class Region(models.Model):
 
 class Appellation(models.Model):
     name = models.CharField(max_length=255, unique=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="appellations",
+    )
 
     class Meta:
         verbose_name_plural = "appellations"
@@ -65,6 +87,13 @@ class Reference(models.Model):
     price_multiplier = models.DecimalField(max_digits=4, decimal_places=2, default=3.00)
     retail_price_override = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     hidden_from_menu = models.BooleanField(default=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="references_owned",
+    )
 
     class Meta:
         ordering = ["name"]
@@ -88,6 +117,13 @@ class Purchase(models.Model):
 class MenuTemplate(models.Model):
     content = models.TextField(default="")
     updated_at = models.DateTimeField(auto_now=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="menu_templates",
+    )
 
     class Meta:
         verbose_name = "Menu Template"

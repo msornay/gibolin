@@ -1,7 +1,7 @@
 from django.test import TestCase, Client
 import json
 
-from .models import Reference, Purchase, Category, Region, Appellation
+from .models import Reference, Purchase, Category, Region, Appellation, MenuTemplate
 from .api import (
     sqid_encode, sqid_decode, _parse_menu_template,
     _build_wine_data, _build_appellation_list, _build_region_list,
@@ -1088,3 +1088,27 @@ class ExportWineMenuLocationFilterTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Wine A", content)
         self.assertIn("Wine B", content)
+
+
+class MultiUserSchemaTest(TestCase):
+    """Verify each model with a user ForeignKey can be created with user=None."""
+
+    def test_category_with_null_user(self):
+        cat = Category.objects.create(name="Red")
+        self.assertIsNone(cat.user)
+
+    def test_region_with_null_user(self):
+        region = Region.objects.create(name="Bordeaux")
+        self.assertIsNone(region.user)
+
+    def test_appellation_with_null_user(self):
+        appellation = Appellation.objects.create(name="Margaux")
+        self.assertIsNone(appellation.user)
+
+    def test_reference_with_null_user(self):
+        ref = Reference.objects.create(name="Test Wine")
+        self.assertIsNone(ref.user)
+
+    def test_menu_template_with_null_user(self):
+        mt = MenuTemplate.objects.create(content="# Menu")
+        self.assertIsNone(mt.user)

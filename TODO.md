@@ -2,14 +2,6 @@
 
 - location in the reference form should be a combobox that allows to create new location
 
-## Multi-user schema (preparation, no auth yet)
-
-- Add `from django.conf import settings` to `cave/models.py`
-- Add nullable `user` ForeignKey (`settings.AUTH_USER_MODEL`, `on_delete=models.SET_NULL`, `null=True`, `blank=True`) to: Category, Region, Appellation, Reference, MenuTemplate. Use distinct `related_name` for each (e.g. `categories`, `regions`, `appellations`, `references_owned`, `menu_templates`). Purchase does NOT need one (scoped through Reference FK).
-- Generate migration with `makemigrations cave`
-- Add `MultiUserSchemaTest` to `cave/tests.py`: verify each model can be created with `user=None`
-- Do NOT add auth, login, user filtering, or frontend auth. Schema only.
-
 ## Authentication (Google OIDC via mozilla-django-oidc)
 
 Goal: Google login for friends-only access. Admin pre-creates User records with allowed emails. Django sessions protect both the API and Django admin. No registration, no password reset, no password storage.
