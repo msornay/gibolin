@@ -1,5 +1,7 @@
 # TODO
 
+- location in the reference form should be a combobox that allows to create new location
+
 ## Multi-user schema (preparation, no auth yet)
 
 - Add `from django.conf import settings` to `cave/models.py`
