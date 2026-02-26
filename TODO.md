@@ -1,7 +1,5 @@
 # TODO
 
-- location in the reference form should be a combobox that allows to create new location
-
 ## Authentication (Google OIDC via mozilla-django-oidc)
 
 Goal: Google login for friends-only access. Admin pre-creates User records with allowed emails. Django sessions protect both the API and Django admin. No registration, no password reset, no password storage.

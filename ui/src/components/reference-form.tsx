@@ -46,6 +46,9 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   const [isAddingRegion, setIsAddingRegion] = React.useState(false);
   const [newAppellationName, setNewAppellationName] = React.useState("");
   const [isAddingAppellation, setIsAddingAppellation] = React.useState(false);
+  const [newLocationName, setNewLocationName] = React.useState("");
+  const [isAddingLocation, setIsAddingLocation] = React.useState(false);
+  const [addedLocations, setAddedLocations] = React.useState<string[]>([]);
 
   // Fetch categories
   const { data: categories, refetch: refetchCategories } = useQuery({
@@ -64,8 +67,15 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   // Fetch appellations
   const { data: appellations, refetch: refetchAppellations } = useQuery({
     queryKey: ['appellations'],
-    queryFn: () => 
+    queryFn: () =>
       fetch(`${API_BASE_URL}/api/appellations`).then(res => res.json()),
+  });
+
+  // Fetch locations
+  const { data: locations } = useQuery({
+    queryKey: ['locations'],
+    queryFn: () =>
+      fetch(`${API_BASE_URL}/api/locations`).then(res => res.json()),
   });
 
 
@@ -93,6 +103,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
       queryClient.invalidateQueries({ queryKey: ["categories"] });
       queryClient.invalidateQueries({ queryKey: ["regions"] });
       queryClient.invalidateQueries({ queryKey: ["appellations"] });
+      queryClient.invalidateQueries({ queryKey: ["locations"] });
       queryClient.invalidateQueries({ queryKey: ["reference", reference?.sqid] });
       refetchCategories(); // Force refetch categories
       refetchRegions(); // Force refetch regions
@@ -169,6 +180,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
       queryClient.invalidateQueries({ queryKey: ["categories"] });
       queryClient.invalidateQueries({ queryKey: ["regions"] });
       queryClient.invalidateQueries({ queryKey: ["appellations"] });
+      queryClient.invalidateQueries({ queryKey: ["locations"] });
       refetchCategories();
       refetchRegions();
       refetchAppellations();
@@ -364,6 +376,26 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
     setIsAddingAppellation(false);
   };
 
+  // Handle new location creation (client-side only, no API call needed)
+  const handleAddLocation = () => {
+    if (newLocationName.trim()) {
+      const trimmedName = newLocationName.trim();
+      const allLocations = [...(locations || []), ...addedLocations];
+      if (allLocations.includes(trimmedName)) {
+        messageApi.warning("Location already exists");
+        return;
+      }
+      setAddedLocations((prev) => [...prev, trimmedName]);
+      form.setFieldsValue({ location: trimmedName });
+      setNewLocationName("");
+      setIsAddingLocation(false);
+    }
+  };
+
+  const handleCancelAddLocation = () => {
+    setNewLocationName("");
+    setIsAddingLocation(false);
+  };
 
   // Set initial form values
   React.useEffect(() => {
@@ -374,7 +406,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
         region: referenceData.region,
         appellation: referenceData.appellation,
         domain: referenceData.domain,
-        location: referenceData.location,
+        location: referenceData.location || undefined,
         vintage: referenceData.vintage,
         current_quantity: referenceData.current_quantity,
         hidden_from_menu: referenceData.hidden_from_menu,
@@ -388,7 +420,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
         region: undefined,
         appellation: undefined,
         domain: "",
-        location: "",
+        location: undefined,
         vintage: new Date().getFullYear(),
         current_quantity: 0,
         hidden_from_menu: false,
@@ -462,7 +494,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
           region: undefined,
           appellation: undefined,
           domain: "",
-          location: "",
+          location: undefined,
           vintage: new Date().getFullYear(),
           current_quantity: 0,
           hidden_from_menu: false,
@@ -651,7 +683,53 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
           label="Location"
           name="location"
         >
-          <Input placeholder="e.g., Maison principale" />
+          <Select
+            placeholder="Select location"
+            allowClear
+            showSearch
+            options={[...(locations || []), ...addedLocations].map((loc: string) => ({ value: loc, label: loc }))}
+            filterOption={(input, option) =>
+              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+            }
+            popupRender={(menu) => (
+              <div>
+                {menu}
+                <div style={{ borderTop: '1px solid #f0f0f0', padding: '8px' }}>
+                  {!isAddingLocation ? (
+                    <Button
+                      type="text"
+                      icon={<PlusOutlined />}
+                      onClick={() => setIsAddingLocation(true)}
+                      style={{ width: '100%', textAlign: 'left' }}
+                    >
+                      Add new location
+                    </Button>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <Input
+                        placeholder="Location name"
+                        value={newLocationName}
+                        onChange={(e) => setNewLocationName(e.target.value)}
+                        onPressEnter={handleAddLocation}
+                        style={{ flex: 1 }}
+                        autoFocus
+                      />
+                      <Button
+                        type="primary"
+                        size="small"
+                        onClick={handleAddLocation}
+                      >
+                        Add
+                      </Button>
+                      <Button size="small" onClick={handleCancelAddLocation}>
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          />
         </Form.Item>
 
         <Form.Item
