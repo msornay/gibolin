@@ -9,6 +9,7 @@ from django.template.loader import render_to_string
 
 import ninja
 from ninja.pagination import paginate as ninja_paginate
+from ninja.security import django_auth
 import sqids
 
 from .models import Reference, Purchase, Category, Region, Appellation, MenuTemplate
@@ -28,12 +29,17 @@ def sqid_decode(sqid: str):
         raise Http404 from exc
 
 
-api = ninja.NinjaAPI()
+api = ninja.NinjaAPI(auth=django_auth)
 
 
-@api.get("/healthcheck")
+@api.get("/healthcheck", auth=None)
 def status(request):
     return {}
+
+
+@api.get("/me")
+def get_current_user(request):
+    return {"email": request.user.email}
 
 
 @api.get("/stats")

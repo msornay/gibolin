@@ -6,3 +6,5 @@ gunicorn==23.0.0
 psycopg2==2.9.9
 sqids==0.4.1
 whitenoise==6.7.0
+mozilla-django-oidc==4.0.1
+django-ratelimit==4.1.0

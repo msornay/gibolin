@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "cave",
     "users.apps.UsersConfig",
     "corsheaders",
+    "mozilla_django_oidc",
     "django_use_email_as_username.apps.DjangoUseEmailAsUsernameConfig",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -66,6 +67,27 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+# OIDC Configuration (Google)
+OIDC_RP_CLIENT_ID = os.getenv("OIDC_RP_CLIENT_ID", "")
+OIDC_RP_CLIENT_SECRET = os.getenv("OIDC_RP_CLIENT_SECRET", "")
+OIDC_OP_AUTHORIZATION_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
+OIDC_OP_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
+OIDC_OP_USER_ENDPOINT = "https://openidconnect.googleapis.com/v1/userinfo"
+OIDC_OP_JWKS_ENDPOINT = "https://www.googleapis.com/oauth2/v3/certs"
+OIDC_RP_SIGN_ALGO = "RS256"
+OIDC_ENABLED = bool(OIDC_RP_CLIENT_ID)
+
+AUTHENTICATION_BACKENDS = [
+    "cave.auth.GibolinOIDCBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+# Add SessionRefresh when OIDC is configured, or DevAutoLogin in dev
+if OIDC_ENABLED:
+    MIDDLEWARE.append("mozilla_django_oidc.middleware.SessionRefresh")
+elif DEBUG:
+    MIDDLEWARE.append("cave.middleware.DevAutoLoginMiddleware")
 
 ROOT_URLCONF = "gibolin.urls"
 
@@ -150,3 +172,12 @@ WHITENOISE_ROOT = str(BASE_DIR / ".." / "ui" / "dist")
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Session security
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_AGE = 86400 * 7  # 1 week
+
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/"

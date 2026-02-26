@@ -1,11 +1,25 @@
 from django.test import TestCase, Client
 import json
 
+from users.models import User
+from .auth import GibolinOIDCBackend
 from .models import Reference, Purchase, Category, Region, Appellation, MenuTemplate
 from .api import (
     sqid_encode, sqid_decode, _parse_menu_template,
     _build_wine_data, _build_appellation_list, _build_region_list,
 )
+
+
+class AuthenticatedTestCase(TestCase):
+    """Base test class that creates and logs in a test user."""
+
+    def setUp(self):
+        super().setUp()
+        self.user = User.objects.create_user(
+            email="test@example.com", password="testpassword"
+        )
+        self.client = Client()
+        self.client.force_login(self.user)
 
 
 class ReferenceModelTest(TestCase):
@@ -38,9 +52,9 @@ class SqidUtilsTest(TestCase):
         self.assertEqual(original_id, decoded_id)
 
 
-class ReferenceAPITest(TestCase):
+class ReferenceAPITest(AuthenticatedTestCase):
     def setUp(self):
-        self.client = Client()
+        super().setUp()
         self.category = Category.objects.create(name="Red")
         self.reference = Reference.objects.create(
             name="Test Wine", category=self.category, domain="test.com", vintage=2020
@@ -347,9 +361,9 @@ class ReferenceAPITest(TestCase):
         self.assertIn("Red", data)  # From self.category
 
 
-class PurchaseAPITest(TestCase):
+class PurchaseAPITest(AuthenticatedTestCase):
     def setUp(self):
-        self.client = Client()
+        super().setUp()
         self.category = Category.objects.create(name="Red")
         self.reference = Reference.objects.create(
             name="Test Wine", category=self.category, domain="test.com", vintage=2020
@@ -500,9 +514,9 @@ class MenuTemplateParseTest(TestCase):
         self.assertEqual(app_order, {"Côte de Nuits": 0})
 
 
-class MenuTemplateAPITest(TestCase):
+class MenuTemplateAPITest(AuthenticatedTestCase):
     def setUp(self):
-        self.client = Client()
+        super().setUp()
 
     def test_get_menu_template_empty(self):
         """Test getting menu template when none exists"""
@@ -741,9 +755,9 @@ class BuildRegionListTest(TestCase):
         self.assertEqual(result, [])
 
 
-class ExportWineMenuHTMLTest(TestCase):
+class ExportWineMenuHTMLTest(AuthenticatedTestCase):
     def setUp(self):
-        self.client = Client()
+        super().setUp()
 
     def test_export_empty_menu(self):
         """Test HTML export with no wines returns valid HTML"""
@@ -942,9 +956,9 @@ class ReferenceLocationModelTest(TestCase):
         self.assertIsNone(ref.location)
 
 
-class ReferenceLocationAPITest(TestCase):
+class ReferenceLocationAPITest(AuthenticatedTestCase):
     def setUp(self):
-        self.client = Client()
+        super().setUp()
 
     def test_create_with_location(self):
         """Test creating a reference with location via API"""
@@ -1020,9 +1034,9 @@ class ReferenceLocationAPITest(TestCase):
         self.assertEqual(data["items"][0]["name"], "Wine A")
 
 
-class LocationAPITest(TestCase):
+class LocationAPITest(AuthenticatedTestCase):
     def setUp(self):
-        self.client = Client()
+        super().setUp()
 
     def test_empty_db_returns_empty_list(self):
         """Test GET /api/locations with no references returns []"""
@@ -1054,9 +1068,9 @@ class LocationAPITest(TestCase):
         self.assertEqual(data, ["Maison principale", "Résidence secondaire"])
 
 
-class ExportWineMenuLocationFilterTest(TestCase):
+class ExportWineMenuLocationFilterTest(AuthenticatedTestCase):
     def setUp(self):
-        self.client = Client()
+        super().setUp()
         self.cat = Category.objects.create(name="Rouge")
 
     def test_export_with_location_filter(self):
@@ -1112,3 +1126,141 @@ class MultiUserSchemaTest(TestCase):
     def test_menu_template_with_null_user(self):
         mt = MenuTemplate.objects.create(content="# Menu")
         self.assertIsNone(mt.user)
+
+
+class AuthAPITest(TestCase):
+    """Test authentication enforcement on API endpoints."""
+
+    def test_healthcheck_no_auth(self):
+        """Healthcheck should work without authentication"""
+        client = Client()
+        response = client.get("/api/healthcheck")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {})
+
+    def test_refs_returns_401_unauthenticated(self):
+        """API endpoints should return 401 when not authenticated"""
+        client = Client()
+        response = client.get("/api/refs")
+        self.assertEqual(response.status_code, 401)
+
+    def test_stats_returns_401_unauthenticated(self):
+        """Stats endpoint should return 401 when not authenticated"""
+        client = Client()
+        response = client.get("/api/stats")
+        self.assertEqual(response.status_code, 401)
+
+    def test_create_ref_returns_401_unauthenticated(self):
+        """Create ref should return 401 when not authenticated"""
+        client = Client()
+        data = {"name": "Test Wine"}
+        response = client.post(
+            "/api/ref", json.dumps(data), content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_refs_returns_200_authenticated(self):
+        """API endpoints should return 200 when authenticated"""
+        user = User.objects.create_user(
+            email="auth@example.com", password="test"
+        )
+        client = Client()
+        client.force_login(user)
+        response = client.get("/api/refs")
+        self.assertEqual(response.status_code, 200)
+
+    def test_me_returns_401_unauthenticated(self):
+        """GET /api/me should return 401 when not authenticated"""
+        client = Client()
+        response = client.get("/api/me")
+        self.assertEqual(response.status_code, 401)
+
+    def test_me_returns_user_email(self):
+        """GET /api/me should return current user email"""
+        user = User.objects.create_user(
+            email="me@example.com", password="test"
+        )
+        client = Client()
+        client.force_login(user)
+        response = client.get("/api/me")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["email"], "me@example.com")
+
+
+class OIDCBackendTest(TestCase):
+    """Test custom OIDC backend email whitelist enforcement."""
+
+    def test_known_email_returns_user(self):
+        """OIDC backend should return user for known email"""
+        user = User.objects.create_user(
+            email="known@example.com", password="test"
+        )
+        backend = GibolinOIDCBackend()
+        result = backend.filter_users_by_claims({"email": "known@example.com"})
+        self.assertEqual(list(result), [user])
+
+    def test_known_email_case_insensitive(self):
+        """OIDC backend should match email case-insensitively"""
+        user = User.objects.create_user(
+            email="Known@Example.COM", password="test"
+        )
+        backend = GibolinOIDCBackend()
+        result = backend.filter_users_by_claims({"email": "known@example.com"})
+        self.assertEqual(list(result), [user])
+
+    def test_unknown_email_returns_empty(self):
+        """OIDC backend should return empty for unknown email"""
+        backend = GibolinOIDCBackend()
+        result = backend.filter_users_by_claims(
+            {"email": "unknown@example.com"}
+        )
+        self.assertEqual(list(result), [])
+
+    def test_empty_email_returns_empty(self):
+        """OIDC backend should return empty for empty email"""
+        backend = GibolinOIDCBackend()
+        result = backend.filter_users_by_claims({"email": ""})
+        self.assertEqual(list(result), [])
+
+    def test_missing_email_returns_empty(self):
+        """OIDC backend should return empty when no email in claims"""
+        backend = GibolinOIDCBackend()
+        result = backend.filter_users_by_claims({})
+        self.assertEqual(list(result), [])
+
+    def test_create_user_returns_none(self):
+        """OIDC backend should reject user creation (friends-only gate)"""
+        backend = GibolinOIDCBackend()
+        result = backend.create_user({"email": "new@example.com"})
+        self.assertIsNone(result)
+
+
+class LogoutViewTest(TestCase):
+    """Test logout view."""
+
+    def test_logout_redirects_to_root(self):
+        """Logout should redirect to /"""
+        user = User.objects.create_user(
+            email="logout@example.com", password="test"
+        )
+        client = Client()
+        client.force_login(user)
+        response = client.get("/logout/")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, "/")
+
+    def test_logout_clears_session(self):
+        """Logout should clear the session"""
+        user = User.objects.create_user(
+            email="logout@example.com", password="test"
+        )
+        client = Client()
+        client.force_login(user)
+        # Verify logged in
+        response = client.get("/api/me")
+        self.assertEqual(response.status_code, 200)
+        # Logout
+        client.get("/logout/")
+        # Verify logged out
+        response = client.get("/api/me")
+        self.assertEqual(response.status_code, 401)

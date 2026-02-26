@@ -6,6 +6,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from cave.models import Category, Region, Appellation, Reference, Purchase
+from users.models import User
 
 
 class Command(BaseCommand):
@@ -28,6 +29,7 @@ class Command(BaseCommand):
             Category.objects.all().delete()
 
         with transaction.atomic():
+            self.create_dev_user()
             self.create_categories()
             self.create_regions()
             self.create_appellations()
@@ -37,6 +39,7 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(
                 f"Successfully loaded test data:\n"
+                f"- {User.objects.count()} users\n"
                 f"- {Category.objects.count()} categories\n"
                 f"- {Region.objects.count()} regions\n"
                 f"- {Appellation.objects.count()} appellations\n"
@@ -44,6 +47,17 @@ class Command(BaseCommand):
                 f"- {Purchase.objects.count()} purchases"
             )
         )
+
+    def create_dev_user(self):
+        """Create a dev user for local development"""
+        user, created = User.objects.get_or_create(
+            email="dev@gibolin.local",
+            defaults={"is_staff": True, "is_superuser": True},
+        )
+        if created:
+            user.set_password("dev")
+            user.save()
+            self.stdout.write(f"Created dev user: {user.email}")
 
     def create_categories(self):
         """Create wine categories with colors"""

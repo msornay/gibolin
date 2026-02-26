@@ -21,8 +21,9 @@ import {
   Statistic,
   Tooltip,
   Select,
+  Spin,
 } from "antd";
-import { EditOutlined, PlusOutlined, ExportOutlined, BarChartOutlined, EyeOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
+import { EditOutlined, PlusOutlined, ExportOutlined, BarChartOutlined, EyeOutlined, EyeInvisibleOutlined, LogoutOutlined, GoogleOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 
 import { ReferenceDetails } from "@/components/reference-form";
@@ -61,6 +62,15 @@ export type RefsResponse = {
   items: Reference[];
 };
 
+// Auth
+type CurrentUser = { email: string };
+
+const fetchCurrentUser = async (): Promise<CurrentUser> => {
+  const response = await fetch(`${API_BASE_URL}/api/me`);
+  if (!response.ok) throw new Error("Unauthorized");
+  return response.json();
+};
+
 // API Functions
 const fetchReferences = async (
   page = 1,
@@ -72,6 +82,10 @@ const fetchReferences = async (
   if (search) url += `&search=${encodeURIComponent(search)}`;
   if (location) url += `&location=${encodeURIComponent(location)}`;
   const response = await fetch(url);
+  if (response.status === 401) {
+    window.location.reload();
+    throw new Error("Session expired");
+  }
   return await response.json();
 };
 
@@ -434,6 +448,12 @@ function ReferenceTable() {
           >
             Export
           </Button>
+          <Button
+            icon={<LogoutOutlined />}
+            onClick={() => { window.location.href = "/logout/"; }}
+          >
+            Logout
+          </Button>
         </Space>
       </div>
       
@@ -590,6 +610,47 @@ const router = createBrowserRouter([
   },
 ]);
 
+function LoginPage() {
+  return (
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
+      <div style={{ textAlign: "center" }}>
+        <Title level={2}>Gibolin</Title>
+        <Typography.Paragraph type="secondary">Wine cellar management</Typography.Paragraph>
+        <Button
+          type="primary"
+          size="large"
+          icon={<GoogleOutlined />}
+          href="/oidc/authenticate/"
+        >
+          Login with Google
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const { isLoading, error } = useQuery({
+    queryKey: ["me"],
+    queryFn: fetchCurrentUser,
+    retry: false,
+  });
+
+  if (isLoading) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <LoginPage />;
+  }
+
+  return <RouterProvider router={router} />;
+}
+
 // App Setup
 const queryClient = new QueryClient();
 
@@ -600,7 +661,7 @@ root.render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <AntApp>
-        <RouterProvider router={router} />
+        <App />
       </AntApp>
     </QueryClientProvider>
   </React.StrictMode>,

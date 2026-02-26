@@ -26,7 +26,11 @@ clever env set SECRET_KEY "$(python3 -c 'import secrets; print(secrets.token_url
 clever env set DEBUG "false"
 clever env set ALLOWED_HOSTS "gibolin.cleverapps.io"
 clever env set CC_PRE_BUILD_HOOK "cd ui && npm install && npm run build"
+clever env set OIDC_RP_CLIENT_ID "your-google-client-id"
+clever env set OIDC_RP_CLIENT_SECRET "your-google-client-secret"
 ```
+
+`OIDC_RP_CLIENT_ID` and `OIDC_RP_CLIENT_SECRET` come from Google Cloud Console OAuth 2.0 credentials. Set the authorized redirect URI to `https://gibolin.cleverapps.io/oidc/callback/`.
 
 `CC_PYTHON_MODULE` is already set in `clevercloud/python.json` — no need to set it as an env var.
 
@@ -64,4 +68,15 @@ clever ssh
 python manage.py seed_db
 ```
 
-Or use the admin at `https://gibolin.cleverapps.io/admin/`.
+Or use the admin at `https://gibolin.cleverapps.io/backoffice/`.
+
+## 7. Create allowed users
+
+Users must be pre-created in the admin to allow Google OIDC login. No self-registration.
+
+```bash
+clever ssh
+python manage.py createsuperuser
+```
+
+Then add allowed users via the admin at `/backoffice/`.

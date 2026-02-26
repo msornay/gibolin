@@ -19,6 +19,9 @@ services:
     volumes:
       - ./api:/app
     command: ./manage.py runserver 0.0.0.0:8000
+    environment:
+      - OIDC_RP_CLIENT_ID=${OIDC_RP_CLIENT_ID:-}
+      - OIDC_RP_CLIENT_SECRET=${OIDC_RP_CLIENT_SECRET:-}
     depends_on:
       - postgres
 

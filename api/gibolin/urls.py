@@ -9,11 +9,12 @@ import os
 
 from django.contrib import admin
 from django.http import HttpResponse
-from django.urls import path, re_path
+from django.urls import include, path, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 
 from cave.api import api as cave_api
+from cave.views import logout_view
 
 
 def spa_catchall(request):
@@ -28,8 +29,23 @@ def spa_catchall(request):
 
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path("backoffice/", admin.site.urls),
     path("api/", cave_api.urls),
-] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) + [
+    path("logout/", logout_view, name="logout"),
+]
+
+if settings.OIDC_ENABLED:
+    from cave.views import RateLimitedOIDCLoginView
+
+    urlpatterns += [
+        path(
+            "oidc/authenticate/",
+            RateLimitedOIDCLoginView.as_view(),
+            name="oidc_authentication_init",
+        ),
+        path("oidc/", include("mozilla_django_oidc.urls")),
+    ]
+
+urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) + [
     re_path(r"^.*$", spa_catchall),
 ]
