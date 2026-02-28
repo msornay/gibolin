@@ -12,18 +12,18 @@ All commands are run via Docker Compose:
 
 ```bash
 # Start all services (API on :8000, UI on :3000)
-docker-compose up
+docker compose up
 
 # Run all tests
 make test
 
 # Run API tests only
 make test-api
-# Or directly: docker-compose run --rm api python manage.py test cave.tests
+# Or directly: docker compose run --rm api python manage.py test cave.tests
 
 # Run UI tests only
 make test-ui
-# Or directly: docker-compose run --rm ui npm run test:run
+# Or directly: docker compose run --rm ui npm run test:run
 
 # Lint Python code
 make lint
