@@ -65,7 +65,7 @@ Also ensure the `simple_unaccent` text search config exists (see `postgres/init.
 
 ```bash
 clever ssh
-python manage.py seed_db
+python manage.py load_test_data --clear
 ```
 
 Or use the admin at `https://gibolin.cleverapps.io/backoffice/`.
