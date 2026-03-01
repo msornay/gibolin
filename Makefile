@@ -1,4 +1,4 @@
-.PHONY: up down lint test test-api test-ui seed-db reset reset-with-data deploy
+.PHONY: up down lint test test-api test-ui migrate seed-db reset reset-with-data deploy
 
 up:
 	docker compose up
@@ -17,7 +17,10 @@ test-api:
 test-ui:
 	docker compose run --rm ui npm run test:run
 
-seed-db:
+migrate:
+	docker compose run --rm api python manage.py migrate
+
+seed-db: migrate
 	docker compose run --rm api python manage.py load_test_data --clear
 
 reset:
@@ -26,8 +29,7 @@ reset:
 reset-with-data: reset
 	docker compose up -d postgres
 	sleep 5
-	docker compose run --rm api python manage.py migrate
-	docker compose run --rm api python manage.py load_test_data --clear
+	$(MAKE) seed-db
 
 deploy:
 	clever deploy
