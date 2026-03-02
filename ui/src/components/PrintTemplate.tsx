@@ -1,5 +1,5 @@
 import React from "react";
-import { Reference, Purchase } from "../index";
+import { Reference } from "../index";
 
 type PrintTemplateProps = {
   references: Reference[];
@@ -39,38 +39,6 @@ export function PrintTemplate({ references, categoryOrder, isPreview, onClose }:
 
     return groups;
   }, [references, categoryOrder]);
-
-  // Calculate totals
-  const totals = React.useMemo(() => {
-    let totalReferences = references.length;
-    let totalPurchases = 0;
-    let totalValue = 0;
-    let totalQuantity = 0;
-
-    references.forEach(ref => {
-      ref.purchases.forEach(purchase => {
-        totalPurchases++;
-        totalValue += purchase.price * purchase.quantity;
-        totalQuantity += purchase.quantity;
-      });
-    });
-
-    return { totalReferences, totalPurchases, totalValue, totalQuantity };
-  }, [references]);
-
-  const formatCurrency = (amount: number) => `€${amount.toFixed(2)}`;
-
-  const formatPurchases = (purchases: Purchase[]) => {
-    if (purchases.length === 0) return '-';
-    
-    return purchases.map(p => 
-      `${p.date}: ${p.quantity}x @ ${formatCurrency(p.price)}`
-    ).join('; ');
-  };
-
-  const getReferenceTotalValue = (purchases: Purchase[]) => {
-    return purchases.reduce((sum, p) => sum + (p.price * p.quantity), 0);
-  };
 
   return (
     <div className={`print-content ${isPreview ? 'preview-mode' : ''}`}>

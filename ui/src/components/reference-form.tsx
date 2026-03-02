@@ -26,6 +26,12 @@ import dayjs from "dayjs";
 import { Reference, Purchase } from "../index";
 import { API_BASE_URL } from "@/api";
 
+type PurchaseFormValues = {
+  date: { format: (fmt: string) => string };
+  quantity: number;
+  price: number;
+};
+
 const { Title } = Typography;
 
 type ReferenceDetailsProps = {
@@ -92,7 +98,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
 
   // Update reference mutation
   const updateMutation = useMutation({
-    mutationFn: (values: any) =>
+    mutationFn: (values: Record<string, unknown>) =>
       fetch(`${API_BASE_URL}/api/ref/${reference?.sqid}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -169,7 +175,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
 
   // Create reference mutation
   const createMutation = useMutation({
-    mutationFn: (values: any) =>
+    mutationFn: (values: Record<string, unknown>) =>
       fetch(`${API_BASE_URL}/api/ref`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -195,7 +201,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
 
   // Purchase mutations
   const createPurchaseMutation = useMutation({
-    mutationFn: (values: any) =>
+    mutationFn: (values: PurchaseFormValues) =>
       fetch(`${API_BASE_URL}/api/ref/${reference?.sqid}/purchases`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -217,7 +223,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   });
 
   const updatePurchaseMutation = useMutation({
-    mutationFn: ({ id, values }: { id: number; values: any }) =>
+    mutationFn: ({ id, values }: { id: number; values: PurchaseFormValues }) =>
       fetch(`${API_BASE_URL}/api/purchase/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -255,7 +261,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   });
 
   // Handle form submission
-  const handleSubmit = (values: any) => {
+  const handleSubmit = (values: Record<string, unknown>) => {
     if (reference) {
       updateMutation.mutate(values);
     } else {
@@ -264,7 +270,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   };
 
   // Handle purchase form submission
-  const handlePurchaseSubmit = (values: any) => {
+  const handlePurchaseSubmit = (values: PurchaseFormValues) => {
     if (editingPurchase) {
       updatePurchaseMutation.mutate({ id: editingPurchase.id, values });
     } else {

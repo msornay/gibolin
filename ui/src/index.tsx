@@ -90,6 +90,7 @@ const fetchReferences = async (
 };
 
 
+// eslint-disable-next-line react-refresh/only-export-components
 function ReferenceTable() {
   const [search, setSearch] = React.useState<string>("");
   const [debouncedSearch, setDebouncedSearch] = React.useState<string>("");
@@ -175,8 +176,8 @@ function ReferenceTable() {
       fetch(`${API_BASE_URL}/api/locations`).then(res => res.json()),
   });
 
-  // Fetch categories
-  const { data: categories } = useQuery({
+  // Fetch categories (for cache warming)
+  useQuery({
     queryKey: ["categories"],
     queryFn: () =>
       fetch(`${API_BASE_URL}/api/categories`).then(res => res.json()),
@@ -610,6 +611,7 @@ const router = createBrowserRouter([
   },
 ]);
 
+// eslint-disable-next-line react-refresh/only-export-components
 function LoginPage() {
   return (
     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
@@ -629,6 +631,7 @@ function LoginPage() {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 function App() {
   const { isLoading, error } = useQuery({
     queryKey: ["me"],

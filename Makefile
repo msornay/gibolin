@@ -8,6 +8,7 @@ down:
 
 lint:
 	docker compose run --rm api ruff check
+	docker compose run --rm ui npm run lint
 
 test: test-api test-ui
 
