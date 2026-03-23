@@ -296,6 +296,7 @@ export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetai
         vintage: referenceData.vintage,
         current_quantity: referenceData.current_quantity,
         hidden_from_menu: referenceData.hidden_from_menu,
+        notes: referenceData.notes || undefined,
         price_multiplier: referenceData.price_multiplier,
         retail_price_override: referenceData.retail_price_override,
       });
@@ -311,6 +312,7 @@ export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetai
         vintage: new Date().getFullYear(),
         current_quantity: 0,
         hidden_from_menu: false,
+        notes: undefined,
         price_multiplier: 3,
         retail_price_override: undefined,
       });
@@ -386,6 +388,7 @@ export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetai
           vintage: new Date().getFullYear(),
           current_quantity: 0,
           hidden_from_menu: false,
+          notes: undefined,
           price_multiplier: 3,
           retail_price_override: undefined,
         }}
@@ -525,6 +528,16 @@ export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetai
           <InputNumber
             min={0}
             style={{ width: "100%" }}
+          />
+        </Form.Item>
+
+        <Form.Item
+          label="Notes"
+          name="notes"
+        >
+          <Input.TextArea
+            placeholder="Free-form notes"
+            rows={3}
           />
         </Form.Item>
 

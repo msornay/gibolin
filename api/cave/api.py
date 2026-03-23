@@ -85,6 +85,7 @@ class ReferenceIn(ninja.Schema):
     current_quantity: Optional[int] = 0
     price_multiplier: Optional[float] = 3.00
     retail_price_override: Optional[float] = None
+    notes: Optional[str] = None
     hidden_from_menu: Optional[bool] = False
 
     class Config:
@@ -136,6 +137,7 @@ class ReferenceOut(ninja.Schema):
     price_multiplier: float
     retail_price_override: Optional[float]
     retail_price: Optional[int]
+    notes: Optional[str]
     hidden_from_menu: bool
     purchases: List[PurchaseOut]
 

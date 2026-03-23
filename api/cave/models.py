@@ -110,6 +110,7 @@ class Reference(models.Model):
     current_quantity = models.IntegerField(default=0)
     price_multiplier = models.DecimalField(max_digits=4, decimal_places=2, default=3.00)
     retail_price_override = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    notes = models.TextField(null=True, blank=True)
     hidden_from_menu = models.BooleanField(default=False)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

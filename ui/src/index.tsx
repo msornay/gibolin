@@ -54,6 +54,7 @@ export type Reference = {
   price_multiplier: number;
   retail_price_override?: number;
   retail_price?: number;
+  notes?: string;
   hidden_from_menu: boolean;
   purchases: Purchase[];
 };

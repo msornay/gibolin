@@ -1043,6 +1043,44 @@ class ReferenceLocationModelTest(TestCase):
         self.assertIsNone(ref.location)
 
 
+class ReferenceNotesTest(AuthenticatedTestCase):
+    def test_create_reference_with_notes(self):
+        data = {"name": "Wine With Notes", "notes": "Lovely tannins, pair with lamb"}
+        response = self.client.post(
+            "/api/ref", json.dumps(data), content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+        ref = Reference.objects.get(name="Wine With Notes")
+        self.assertEqual(ref.notes, "Lovely tannins, pair with lamb")
+
+    def test_update_reference_notes(self):
+        ref = Reference.objects.create(name="Wine")
+        sqid = sqid_encode(ref.id)
+        data = {"name": "Wine", "notes": "Updated notes"}
+        response = self.client.put(
+            f"/api/ref/{sqid}", json.dumps(data), content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+        ref.refresh_from_db()
+        self.assertEqual(ref.notes, "Updated notes")
+
+    def test_get_reference_returns_notes(self):
+        ref = Reference.objects.create(name="Wine", notes="Some notes")
+        sqid = sqid_encode(ref.id)
+        response = self.client.get(f"/api/ref/{sqid}")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["notes"], "Some notes")
+
+    def test_notes_optional_defaults_null(self):
+        data = {"name": "Wine Without Notes"}
+        response = self.client.post(
+            "/api/ref", json.dumps(data), content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+        ref = Reference.objects.get(name="Wine Without Notes")
+        self.assertIsNone(ref.notes)
+
+
 class ReferenceLocationAPITest(AuthenticatedTestCase):
     def setUp(self):
         super().setUp()
