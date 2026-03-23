@@ -1,4 +1,5 @@
 from django.test import TestCase, Client, override_settings
+from django.core.management import call_command
 import json
 
 from users.models import User
@@ -1664,3 +1665,53 @@ class LogoutViewTest(TestCase):
         # Verify logged out
         response = client.get("/api/me")
         self.assertEqual(response.status_code, 401)
+
+
+class CleanupOrphanedLookupsCommandTest(TestCase):
+    """Test the cleanup_orphaned_lookups management command."""
+
+    def test_deletes_orphaned_category(self):
+        Category.objects.create(name="Orphan")
+        call_command("cleanup_orphaned_lookups")
+        self.assertFalse(Category.objects.filter(name="Orphan").exists())
+
+    def test_deletes_orphaned_region(self):
+        Region.objects.create(name="Orphan")
+        call_command("cleanup_orphaned_lookups")
+        self.assertFalse(Region.objects.filter(name="Orphan").exists())
+
+    def test_deletes_orphaned_appellation(self):
+        Appellation.objects.create(name="Orphan")
+        call_command("cleanup_orphaned_lookups")
+        self.assertFalse(Appellation.objects.filter(name="Orphan").exists())
+
+    def test_deletes_orphaned_format(self):
+        Format.objects.create(name="Orphan")
+        call_command("cleanup_orphaned_lookups")
+        self.assertFalse(Format.objects.filter(name="Orphan").exists())
+
+    def test_deletes_orphaned_grape(self):
+        Grape.objects.create(name="Orphan")
+        call_command("cleanup_orphaned_lookups")
+        self.assertFalse(Grape.objects.filter(name="Orphan").exists())
+
+    def test_keeps_used_category(self):
+        cat = Category.objects.create(name="Used")
+        Reference.objects.create(name="Wine", category=cat)
+        call_command("cleanup_orphaned_lookups")
+        self.assertTrue(Category.objects.filter(name="Used").exists())
+
+    def test_keeps_used_grape(self):
+        grape = Grape.objects.create(name="Used")
+        ref = Reference.objects.create(name="Wine")
+        ref.grapes.add(grape)
+        call_command("cleanup_orphaned_lookups")
+        self.assertTrue(Grape.objects.filter(name="Used").exists())
+
+    def test_mixed_orphans_and_used(self):
+        cat_used = Category.objects.create(name="Used")
+        Category.objects.create(name="Orphan")
+        Reference.objects.create(name="Wine", category=cat_used)
+        call_command("cleanup_orphaned_lookups")
+        self.assertTrue(Category.objects.filter(name="Used").exists())
+        self.assertFalse(Category.objects.filter(name="Orphan").exists())
