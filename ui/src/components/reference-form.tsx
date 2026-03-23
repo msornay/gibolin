@@ -38,16 +38,11 @@ const { Title } = Typography;
 type ReferenceDetailsProps = {
   reference: Reference | null;
   onClose: () => void;
-  formRef?: React.MutableRefObject<ReturnType<typeof Form.useForm>[0] | null>;
+  formRef?: React.MutableRefObject<(() => void) | null>;
 };
 
 export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetailsProps) {
   const [form] = Form.useForm();
-
-  React.useEffect(() => {
-    if (formRef) formRef.current = form;
-    return () => { if (formRef) formRef.current = null; };
-  }, [form, formRef]);
   const queryClient = useQueryClient();
   const [messageApi, contextHolder] = message.useMessage();
   const [showPurchaseForm, setShowPurchaseForm] = React.useState(false);
@@ -214,13 +209,25 @@ export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetai
   });
 
   // Handle form submission
-  const handleSubmit = (values: Record<string, unknown>) => {
+  const handleSubmit = React.useCallback((values: Record<string, unknown>) => {
     if (reference) {
       updateMutation.mutate(values);
     } else {
       createMutation.mutate(values);
     }
-  };
+  }, [reference, updateMutation, createMutation]);
+
+  // Expose submit callback via formRef for save-on-modal-close
+  React.useEffect(() => {
+    if (formRef) {
+      formRef.current = () => {
+        form.validateFields()
+          .then((values) => handleSubmit(values))
+          .catch(() => onClose());
+      };
+    }
+    return () => { if (formRef) formRef.current = null; };
+  }, [form, formRef, handleSubmit, onClose]);
 
   // Handle purchase form submission
   const handlePurchaseSubmit = (values: PurchaseFormValues) => {

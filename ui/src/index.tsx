@@ -106,7 +106,7 @@ function ReferenceTable() {
   const [quantityValue, setQuantityValue] = React.useState<number>(0);
   const [selectedLocation, setSelectedLocation] = React.useState<string | undefined>(undefined);
   const [exportLocation, setExportLocation] = React.useState<string | undefined>(undefined);
-  const formRef = React.useRef<ReturnType<typeof import("antd").Form.useForm>[0] | null>(null);
+  const formRef = React.useRef<(() => void) | null>(null);
   const queryClient = useQueryClient();
 
   const handleSearchChange = React.useCallback((value: string) => {
@@ -131,7 +131,7 @@ function ReferenceTable() {
 
   const handleModalCancel = React.useCallback(() => {
     if (formRef.current) {
-      formRef.current.submit();
+      formRef.current();
     } else {
       handleCloseModal();
     }

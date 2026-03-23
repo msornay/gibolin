@@ -103,13 +103,13 @@ describe("React rendering", () => {
 });
 
 describe("Save on modal close", () => {
-  it("formRef pattern: ref object receives a submit method when set", () => {
-    // Verify the ref pattern works: a mutable ref starts null,
-    // and when populated would have a submit method
-    const ref = { current: null as { submit: () => void } | null };
+  it("formRef stores a callable submit function", () => {
+    const ref = { current: null as (() => void) | null };
     expect(ref.current).toBeNull();
-    // Simulate what ReferenceDetails does: assign form to ref
-    ref.current = { submit: () => {} };
-    expect(typeof ref.current.submit).toBe("function");
+    let called = false;
+    ref.current = () => { called = true; };
+    expect(typeof ref.current).toBe("function");
+    ref.current();
+    expect(called).toBe(true);
   });
 });
