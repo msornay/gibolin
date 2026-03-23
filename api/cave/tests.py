@@ -1,4 +1,4 @@
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 import json
 
 from users.models import User
@@ -1185,6 +1185,45 @@ class AuthAPITest(TestCase):
         response = client.get("/api/me")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["email"], "me@example.com")
+
+
+class ConfigAPITest(TestCase):
+    """Test /api/config public endpoint."""
+
+    def test_config_no_auth_required(self):
+        """GET /api/config should return 200 without authentication"""
+        client = Client()
+        response = client.get("/api/config")
+        self.assertEqual(response.status_code, 200)
+
+    def test_config_reports_oidc_disabled(self):
+        """Config should report oidc_enabled=false when not configured"""
+        client = Client()
+        response = client.get("/api/config")
+        self.assertFalse(response.json()["oidc_enabled"])
+
+    @override_settings(OIDC_ENABLED=True)
+    def test_config_reports_oidc_enabled(self):
+        """Config should report oidc_enabled=true when configured"""
+        client = Client()
+        response = client.get("/api/config")
+        self.assertTrue(response.json()["oidc_enabled"])
+
+
+class OIDCDisabledURLTest(TestCase):
+    """Test that /oidc/* returns 404 when OIDC is not configured."""
+
+    def test_oidc_authenticate_404_when_disabled(self):
+        """GET /oidc/authenticate/ should return 404, not SPA catchall"""
+        client = Client()
+        response = client.get("/oidc/authenticate/")
+        self.assertEqual(response.status_code, 404)
+
+    def test_oidc_callback_404_when_disabled(self):
+        """GET /oidc/callback/ should return 404 when OIDC is disabled"""
+        client = Client()
+        response = client.get("/oidc/callback/")
+        self.assertEqual(response.status_code, 404)
 
 
 class OIDCBackendTest(TestCase):

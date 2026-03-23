@@ -45,6 +45,13 @@ if settings.OIDC_ENABLED:
         ),
         path("oidc/", include("mozilla_django_oidc.urls")),
     ]
+else:
+    from django.http import Http404
+
+    def oidc_disabled(request, *args, **kwargs):
+        raise Http404("OIDC is not configured")
+
+    urlpatterns += [re_path(r"^oidc/", oidc_disabled)]
 
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) + [
     re_path(r"^.*$", spa_catchall),

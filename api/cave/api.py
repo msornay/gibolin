@@ -2,6 +2,7 @@ import math
 from typing import List, Optional
 from datetime import datetime
 
+from django.conf import settings
 from django.db.models import Q, Sum, F
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
@@ -35,6 +36,11 @@ api = ninja.NinjaAPI(auth=django_auth)
 @api.get("/healthcheck", auth=None)
 def status(request):
     return {}
+
+
+@api.get("/config", auth=None)
+def get_config(request):
+    return {"oidc_enabled": settings.OIDC_ENABLED}
 
 
 @api.get("/me")

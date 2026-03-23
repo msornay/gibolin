@@ -613,19 +613,32 @@ const router = createBrowserRouter([
 
 // eslint-disable-next-line react-refresh/only-export-components
 function LoginPage() {
+  const { data: config, isLoading } = useQuery({
+    queryKey: ["config"],
+    queryFn: () => fetch(`${API_BASE_URL}/api/config`).then(r => r.json()),
+  });
+
   return (
     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
       <div style={{ textAlign: "center" }}>
         <Title level={2}>Gibolin</Title>
         <Typography.Paragraph type="secondary">Wine cellar management</Typography.Paragraph>
-        <Button
-          type="primary"
-          size="large"
-          icon={<GoogleOutlined />}
-          href="/oidc/authenticate/"
-        >
-          Login with Google
-        </Button>
+        {isLoading ? (
+          <Spin />
+        ) : config?.oidc_enabled ? (
+          <Button
+            type="primary"
+            size="large"
+            icon={<GoogleOutlined />}
+            href="/oidc/authenticate/"
+          >
+            Login with Google
+          </Button>
+        ) : (
+          <Button type="primary" size="large" href="/backoffice/">
+            Login via backoffice
+          </Button>
+        )}
       </div>
     </div>
   );
