@@ -106,6 +106,7 @@ function ReferenceTable() {
   const [quantityValue, setQuantityValue] = React.useState<number>(0);
   const [selectedLocation, setSelectedLocation] = React.useState<string | undefined>(undefined);
   const [exportLocation, setExportLocation] = React.useState<string | undefined>(undefined);
+  const formRef = React.useRef<ReturnType<typeof import("antd").Form.useForm>[0] | null>(null);
   const queryClient = useQueryClient();
 
   const handleSearchChange = React.useCallback((value: string) => {
@@ -127,6 +128,14 @@ function ReferenceTable() {
     setIsModalOpen(false);
     setSelectedReference(null);
   }, []);
+
+  const handleModalCancel = React.useCallback(() => {
+    if (formRef.current) {
+      formRef.current.submit();
+    } else {
+      handleCloseModal();
+    }
+  }, [handleCloseModal]);
 
   const handleExport = React.useCallback(() => {
     setIsExportModalOpen(true);
@@ -531,7 +540,7 @@ function ReferenceTable() {
       <Modal
         title={selectedReference ? "Edit Reference" : "New Reference"}
         open={isModalOpen}
-        onCancel={handleCloseModal}
+        onCancel={handleModalCancel}
         footer={null}
         width={800}
         destroyOnHidden
@@ -539,6 +548,7 @@ function ReferenceTable() {
         <ReferenceDetails
           reference={selectedReference}
           onClose={handleCloseModal}
+          formRef={formRef}
         />
       </Modal>
 

@@ -37,10 +37,16 @@ const { Title } = Typography;
 type ReferenceDetailsProps = {
   reference: Reference | null;
   onClose: () => void;
+  formRef?: React.MutableRefObject<ReturnType<typeof Form.useForm>[0] | null>;
 };
 
-export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) {
+export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetailsProps) {
   const [form] = Form.useForm();
+
+  React.useEffect(() => {
+    if (formRef) formRef.current = form;
+    return () => { if (formRef) formRef.current = null; };
+  }, [form, formRef]);
   const queryClient = useQueryClient();
   const [messageApi, contextHolder] = message.useMessage();
   const [showPurchaseForm, setShowPurchaseForm] = React.useState(false);

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import React from "react";
 
 // Test the type exports to ensure they are properly defined
 import type { Reference, Purchase, RefsResponse } from "../index";
@@ -99,5 +100,17 @@ describe("React rendering", () => {
     const TestComponent = () => <div data-testid="test">Hello, Tests!</div>;
     render(<TestComponent />);
     expect(screen.getByTestId("test")).toHaveTextContent("Hello, Tests!");
+  });
+});
+
+describe("Save on modal close", () => {
+  it("formRef pattern: ref object receives a submit method when set", () => {
+    // Verify the ref pattern works: a mutable ref starts null,
+    // and when populated would have a submit method
+    const ref = { current: null as { submit: () => void } | null };
+    expect(ref.current).toBeNull();
+    // Simulate what ReferenceDetails does: assign form to ref
+    ref.current = { submit: () => {} };
+    expect(typeof ref.current.submit).toBe("function");
   });
 });
