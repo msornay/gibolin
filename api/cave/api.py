@@ -284,7 +284,8 @@ def _search_word(word):
         Q(category__name__unaccent__icontains=word) |
         Q(region__name__unaccent__icontains=word) |
         Q(appellation__name__unaccent__icontains=word) |
-        Q(format__name__unaccent__icontains=word)
+        Q(format__name__unaccent__icontains=word) |
+        Q(notes__unaccent__icontains=word)
     )
 
 

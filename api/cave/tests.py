@@ -1158,6 +1158,16 @@ class ReferenceLocationAPITest(AuthenticatedTestCase):
         self.assertEqual(data["count"], 1)
         self.assertEqual(data["items"][0]["name"], "Wine A")
 
+    def test_search_matches_notes(self):
+        Reference.objects.create(name="Wine A", notes="Pair with lamb")
+        Reference.objects.create(name="Wine B", notes="Good with fish")
+
+        response = self.client.get("/api/refs?search=lamb")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["count"], 1)
+        self.assertEqual(data["items"][0]["name"], "Wine A")
+
 
 class LocationAPITest(AuthenticatedTestCase):
     def setUp(self):
