@@ -1187,6 +1187,35 @@ class AuthAPITest(TestCase):
         self.assertEqual(response.json()["email"], "me@example.com")
 
 
+class CSRFProtectionTest(TestCase):
+    """Test that the SPA sets CSRF cookie and API accepts it."""
+
+    def test_spa_sets_csrf_cookie(self):
+        """SPA catchall should set csrftoken cookie for the frontend"""
+        client = Client(enforce_csrf_checks=True)
+        response = client.get("/")
+        self.assertIn("csrftoken", response.cookies)
+
+    def test_post_with_csrf_token_succeeds(self):
+        """Authenticated POST with CSRF token should succeed"""
+        client = Client(enforce_csrf_checks=True)
+        user = User.objects.create_user(
+            email="csrf@example.com", password="test"
+        )
+        client.force_login(user)
+        # Get CSRF token from SPA page
+        response = client.get("/")
+        csrf_token = response.cookies["csrftoken"].value
+        # POST with token
+        response = client.post(
+            "/api/categories",
+            json.dumps({"name": "Red"}),
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
+        self.assertEqual(response.status_code, 200)
+
+
 class ConfigAPITest(TestCase):
     """Test /api/config public endpoint."""
 

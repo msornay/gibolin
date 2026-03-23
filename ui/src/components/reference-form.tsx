@@ -24,7 +24,7 @@ import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 
 import { Reference, Purchase } from "../index";
-import { API_BASE_URL } from "@/api";
+import { API_BASE_URL, apiFetch } from "@/api";
 
 type PurchaseFormValues = {
   date: { format: (fmt: string) => string };
@@ -99,7 +99,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   // Update reference mutation
   const updateMutation = useMutation({
     mutationFn: (values: Record<string, unknown>) =>
-      fetch(`${API_BASE_URL}/api/ref/${reference?.sqid}`, {
+      apiFetch(`${API_BASE_URL}/api/ref/${reference?.sqid}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
@@ -125,7 +125,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   // Create category mutation
   const createCategoryMutation = useMutation({
     mutationFn: (categoryName: string) =>
-      fetch(`${API_BASE_URL}/api/categories`, {
+      apiFetch(`${API_BASE_URL}/api/categories`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: categoryName }),
@@ -142,7 +142,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   // Create region mutation
   const createRegionMutation = useMutation({
     mutationFn: (regionName: string) =>
-      fetch(`${API_BASE_URL}/api/regions`, {
+      apiFetch(`${API_BASE_URL}/api/regions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: regionName }),
@@ -159,7 +159,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   // Create appellation mutation
   const createAppellationMutation = useMutation({
     mutationFn: (appellationName: string) =>
-      fetch(`${API_BASE_URL}/api/appellations`, {
+      apiFetch(`${API_BASE_URL}/api/appellations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: appellationName }),
@@ -176,7 +176,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   // Create reference mutation
   const createMutation = useMutation({
     mutationFn: (values: Record<string, unknown>) =>
-      fetch(`${API_BASE_URL}/api/ref`, {
+      apiFetch(`${API_BASE_URL}/api/ref`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
@@ -202,7 +202,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   // Purchase mutations
   const createPurchaseMutation = useMutation({
     mutationFn: (values: PurchaseFormValues) =>
-      fetch(`${API_BASE_URL}/api/ref/${reference?.sqid}/purchases`, {
+      apiFetch(`${API_BASE_URL}/api/ref/${reference?.sqid}/purchases`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -224,7 +224,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
 
   const updatePurchaseMutation = useMutation({
     mutationFn: ({ id, values }: { id: number; values: PurchaseFormValues }) =>
-      fetch(`${API_BASE_URL}/api/purchase/${id}`, {
+      apiFetch(`${API_BASE_URL}/api/purchase/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -247,7 +247,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
 
   const deletePurchaseMutation = useMutation({
     mutationFn: (id: number) =>
-      fetch(`${API_BASE_URL}/api/purchase/${id}`, {
+      apiFetch(`${API_BASE_URL}/api/purchase/${id}`, {
         method: "DELETE",
       }),
     onSuccess: () => {

@@ -12,11 +12,13 @@ from django.http import HttpResponse
 from django.urls import include, path, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 from cave.api import api as cave_api
 from cave.views import logout_view
 
 
+@ensure_csrf_cookie
 def spa_catchall(request):
     index_path = os.path.join(settings.BASE_DIR, "..", "ui", "dist", "index.html")
     try:

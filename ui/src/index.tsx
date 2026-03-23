@@ -27,7 +27,7 @@ import { EditOutlined, PlusOutlined, ExportOutlined, BarChartOutlined, EyeOutlin
 import type { ColumnsType } from "antd/es/table";
 
 import { ReferenceDetails } from "@/components/reference-form";
-import { API_BASE_URL } from "@/api";
+import { API_BASE_URL, apiFetch } from "@/api";
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -208,7 +208,7 @@ function ReferenceTable() {
   // Save menu template
   const saveTemplateMutation = useMutation({
     mutationFn: (content: string) =>
-      fetch(`${API_BASE_URL}/api/menu/template`, {
+      apiFetch(`${API_BASE_URL}/api/menu/template`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),
@@ -218,7 +218,7 @@ function ReferenceTable() {
   // Update reference quantity
   const updateQuantityMutation = useMutation({
     mutationFn: ({ sqid, quantity }: { sqid: string; quantity: number }) =>
-      fetch(`${API_BASE_URL}/api/ref/${sqid}/quantity`, {
+      apiFetch(`${API_BASE_URL}/api/ref/${sqid}/quantity`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity }),
@@ -232,7 +232,7 @@ function ReferenceTable() {
   // Update hidden from menu
   const updateHiddenMutation = useMutation({
     mutationFn: ({ sqid, hidden, record }: { sqid: string; hidden: boolean; record: Reference }) =>
-      fetch(`${API_BASE_URL}/api/ref/${sqid}`, {
+      apiFetch(`${API_BASE_URL}/api/ref/${sqid}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
