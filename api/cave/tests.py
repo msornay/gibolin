@@ -1390,6 +1390,100 @@ class OIDCBackendTest(TestCase):
         self.assertIsNone(result)
 
 
+class OrphanLookupCleanupTest(AuthenticatedTestCase):
+    def test_update_ref_deletes_orphaned_category(self):
+        cat = Category.objects.create(name="OldCat")
+        ref = Reference.objects.create(name="Wine", category=cat)
+        sqid = sqid_encode(ref.id)
+        self.client.put(
+            f"/api/ref/{sqid}",
+            json.dumps({"name": "Wine", "category": "NewCat"}),
+            content_type="application/json",
+        )
+        self.assertFalse(Category.objects.filter(name="OldCat").exists())
+        self.assertTrue(Category.objects.filter(name="NewCat").exists())
+
+    def test_update_ref_keeps_shared_category(self):
+        cat = Category.objects.create(name="SharedCat")
+        Reference.objects.create(name="Wine A", category=cat)
+        ref_b = Reference.objects.create(name="Wine B", category=cat)
+        sqid = sqid_encode(ref_b.id)
+        self.client.put(
+            f"/api/ref/{sqid}",
+            json.dumps({"name": "Wine B", "category": "Other"}),
+            content_type="application/json",
+        )
+        self.assertTrue(Category.objects.filter(name="SharedCat").exists())
+
+    def test_update_ref_clearing_lookup_deletes_orphan(self):
+        cat = Category.objects.create(name="LonelyCat")
+        ref = Reference.objects.create(name="Wine", category=cat)
+        sqid = sqid_encode(ref.id)
+        self.client.put(
+            f"/api/ref/{sqid}",
+            json.dumps({"name": "Wine", "category": None}),
+            content_type="application/json",
+        )
+        self.assertFalse(Category.objects.filter(name="LonelyCat").exists())
+
+    def test_update_ref_deletes_orphaned_region(self):
+        region = Region.objects.create(name="OldRegion")
+        ref = Reference.objects.create(name="Wine", region=region)
+        sqid = sqid_encode(ref.id)
+        self.client.put(
+            f"/api/ref/{sqid}",
+            json.dumps({"name": "Wine", "region": "NewRegion"}),
+            content_type="application/json",
+        )
+        self.assertFalse(Region.objects.filter(name="OldRegion").exists())
+
+    def test_update_ref_deletes_orphaned_appellation(self):
+        appellation = Appellation.objects.create(name="OldApp")
+        ref = Reference.objects.create(name="Wine", appellation=appellation)
+        sqid = sqid_encode(ref.id)
+        self.client.put(
+            f"/api/ref/{sqid}",
+            json.dumps({"name": "Wine", "appellation": "NewApp"}),
+            content_type="application/json",
+        )
+        self.assertFalse(Appellation.objects.filter(name="OldApp").exists())
+
+    def test_update_ref_deletes_orphaned_format(self):
+        fmt = Format.objects.create(name="OldFmt")
+        ref = Reference.objects.create(name="Wine", format=fmt)
+        sqid = sqid_encode(ref.id)
+        self.client.put(
+            f"/api/ref/{sqid}",
+            json.dumps({"name": "Wine", "format": "NewFmt"}),
+            content_type="application/json",
+        )
+        self.assertFalse(Format.objects.filter(name="OldFmt").exists())
+
+    def test_delete_ref_deletes_orphaned_lookups(self):
+        cat = Category.objects.create(name="DelCat")
+        region = Region.objects.create(name="DelRegion")
+        appellation = Appellation.objects.create(name="DelApp")
+        fmt = Format.objects.create(name="DelFmt")
+        ref = Reference.objects.create(
+            name="Wine", category=cat, region=region,
+            appellation=appellation, format=fmt,
+        )
+        sqid = sqid_encode(ref.id)
+        self.client.delete(f"/api/ref/{sqid}")
+        self.assertFalse(Category.objects.filter(name="DelCat").exists())
+        self.assertFalse(Region.objects.filter(name="DelRegion").exists())
+        self.assertFalse(Appellation.objects.filter(name="DelApp").exists())
+        self.assertFalse(Format.objects.filter(name="DelFmt").exists())
+
+    def test_delete_ref_keeps_shared_lookups(self):
+        cat = Category.objects.create(name="SharedCat")
+        Reference.objects.create(name="Wine A", category=cat)
+        ref_b = Reference.objects.create(name="Wine B", category=cat)
+        sqid = sqid_encode(ref_b.id)
+        self.client.delete(f"/api/ref/{sqid}")
+        self.assertTrue(Category.objects.filter(name="SharedCat").exists())
+
+
 class LogoutViewTest(TestCase):
     """Test logout view."""
 

@@ -176,6 +176,12 @@ class ReferenceOut(ninja.Schema):
         ]
 
 
+def _cleanup_orphaned_lookups(lookups):
+    for instance in lookups:
+        if instance is not None and instance.references.count() == 0:
+            instance.delete()
+
+
 @api.post("/ref")
 def create_reference(request, reference_in: ReferenceIn):
     data = reference_in.dict()
@@ -204,6 +210,11 @@ def create_reference(request, reference_in: ReferenceIn):
 def update_reference(request, sqid: str, payload: ReferenceIn):
     reference = get_object_or_404(Reference, id=sqid_decode(sqid))
     data = payload.dict()
+
+    old_lookups = [
+        reference.category, reference.region,
+        reference.appellation, reference.format,
+    ]
 
     if "category" in data:
         if data["category"]:
@@ -241,13 +252,19 @@ def update_reference(request, sqid: str, payload: ReferenceIn):
         setattr(reference, attr, value)
 
     reference.save()
+    _cleanup_orphaned_lookups(old_lookups)
     return reference
 
 
 @api.delete("/ref/{sqid}")
 def delete_reference(request, sqid: str):
     reference = get_object_or_404(Reference, id=sqid_decode(sqid))
+    old_lookups = [
+        reference.category, reference.region,
+        reference.appellation, reference.format,
+    ]
     reference.delete()
+    _cleanup_orphaned_lookups(old_lookups)
     return {}
 
 

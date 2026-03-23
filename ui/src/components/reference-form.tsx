@@ -20,6 +20,7 @@ import {
   Checkbox,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
+import { CreatableSelect } from "./CreatableSelect";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 
@@ -52,41 +53,33 @@ export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetai
   const [showPurchaseForm, setShowPurchaseForm] = React.useState(false);
   const [editingPurchase, setEditingPurchase] = React.useState<Purchase | null>(null);
   const [purchaseForm] = Form.useForm();
-  const [newCategoryName, setNewCategoryName] = React.useState("");
-  const [isAddingCategory, setIsAddingCategory] = React.useState(false);
-  const [newRegionName, setNewRegionName] = React.useState("");
-  const [isAddingRegion, setIsAddingRegion] = React.useState(false);
-  const [newAppellationName, setNewAppellationName] = React.useState("");
-  const [isAddingAppellation, setIsAddingAppellation] = React.useState(false);
-  const [newFormatName, setNewFormatName] = React.useState("");
-  const [isAddingFormat, setIsAddingFormat] = React.useState(false);
   const [newLocationName, setNewLocationName] = React.useState("");
   const [isAddingLocation, setIsAddingLocation] = React.useState(false);
   const [addedLocations, setAddedLocations] = React.useState<string[]>([]);
 
   // Fetch categories
-  const { data: categories, refetch: refetchCategories } = useQuery({
+  const { data: categories } = useQuery({
     queryKey: ['categories'],
     queryFn: () => 
       fetch(`${API_BASE_URL}/api/categories`).then(res => res.json()),
   });
 
   // Fetch regions
-  const { data: regions, refetch: refetchRegions } = useQuery({
+  const { data: regions } = useQuery({
     queryKey: ['regions'],
     queryFn: () => 
       fetch(`${API_BASE_URL}/api/regions`).then(res => res.json()),
   });
 
   // Fetch appellations
-  const { data: appellations, refetch: refetchAppellations } = useQuery({
+  const { data: appellations } = useQuery({
     queryKey: ['appellations'],
     queryFn: () =>
       fetch(`${API_BASE_URL}/api/appellations`).then(res => res.json()),
   });
 
   // Fetch formats
-  const { data: formats, refetch: refetchFormats } = useQuery({
+  const { data: formats } = useQuery({
     queryKey: ['formats'],
     queryFn: () =>
       fetch(`${API_BASE_URL}/api/formats`).then(res => res.json()),
@@ -127,83 +120,11 @@ export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetai
       queryClient.invalidateQueries({ queryKey: ["locations"] });
       queryClient.invalidateQueries({ queryKey: ["formats"] });
       queryClient.invalidateQueries({ queryKey: ["reference", reference?.sqid] });
-      refetchCategories();
-      refetchRegions();
-      refetchAppellations();
-      refetchFormats();
       messageApi.success("Reference updated successfully");
       onClose();
     },
     onError: () => {
       messageApi.error("Failed to update reference");
-    },
-  });
-
-  // Create category mutation
-  const createCategoryMutation = useMutation({
-    mutationFn: (categoryName: string) =>
-      apiFetch(`${API_BASE_URL}/api/categories`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: categoryName }),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
-      messageApi.success("Category created successfully");
-    },
-    onError: () => {
-      messageApi.error("Failed to create category");
-    },
-  });
-
-  // Create region mutation
-  const createRegionMutation = useMutation({
-    mutationFn: (regionName: string) =>
-      apiFetch(`${API_BASE_URL}/api/regions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: regionName }),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["regions"] });
-      messageApi.success("Region created successfully");
-    },
-    onError: () => {
-      messageApi.error("Failed to create region");
-    },
-  });
-
-  // Create appellation mutation
-  const createAppellationMutation = useMutation({
-    mutationFn: (appellationName: string) =>
-      apiFetch(`${API_BASE_URL}/api/appellations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: appellationName }),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["appellations"] });
-      messageApi.success("Appellation created successfully");
-    },
-    onError: () => {
-      messageApi.error("Failed to create appellation");
-    },
-  });
-
-  // Create format mutation
-  const createFormatMutation = useMutation({
-    mutationFn: (formatName: string) =>
-      apiFetch(`${API_BASE_URL}/api/formats`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: formatName }),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["formats"] });
-      messageApi.success("Format created successfully");
-    },
-    onError: () => {
-      messageApi.error("Failed to create format");
     },
   });
 
@@ -222,10 +143,6 @@ export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetai
       queryClient.invalidateQueries({ queryKey: ["appellations"] });
       queryClient.invalidateQueries({ queryKey: ["locations"] });
       queryClient.invalidateQueries({ queryKey: ["formats"] });
-      refetchCategories();
-      refetchRegions();
-      refetchAppellations();
-      refetchFormats();
       messageApi.success("Reference created successfully");
       onClose();
     },
@@ -335,110 +252,6 @@ export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetai
     setShowPurchaseForm(false);
     setEditingPurchase(null);
     purchaseForm.resetFields();
-  };
-
-  // Handle new category creation
-  const handleAddCategory = () => {
-    if (newCategoryName.trim()) {
-      const trimmedName = newCategoryName.trim();
-      
-      // Check if category already exists
-      if (categories?.includes(trimmedName)) {
-        messageApi.warning("Category already exists");
-        return;
-      }
-      
-      // Create category server-side
-      createCategoryMutation.mutate(trimmedName, {
-        onSuccess: () => {
-          form.setFieldsValue({ category: trimmedName });
-          setNewCategoryName("");
-          setIsAddingCategory(false);
-        }
-      });
-    }
-  };
-
-  const handleCancelAddCategory = () => {
-    setNewCategoryName("");
-    setIsAddingCategory(false);
-  };
-
-  // Handle new region creation
-  const handleAddRegion = () => {
-    if (newRegionName.trim()) {
-      const trimmedName = newRegionName.trim();
-      
-      // Check if region already exists
-      if (regions?.includes(trimmedName)) {
-        messageApi.warning("Region already exists");
-        return;
-      }
-      
-      // Create region server-side
-      createRegionMutation.mutate(trimmedName, {
-        onSuccess: () => {
-          form.setFieldsValue({ region: trimmedName });
-          setNewRegionName("");
-          setIsAddingRegion(false);
-        }
-      });
-    }
-  };
-
-  const handleCancelAddRegion = () => {
-    setNewRegionName("");
-    setIsAddingRegion(false);
-  };
-
-  // Handle new appellation creation
-  const handleAddAppellation = () => {
-    if (newAppellationName.trim()) {
-      const trimmedName = newAppellationName.trim();
-      
-      // Check if appellation already exists
-      if (appellations?.includes(trimmedName)) {
-        messageApi.warning("Appellation already exists");
-        return;
-      }
-      
-      // Create appellation server-side
-      createAppellationMutation.mutate(trimmedName, {
-        onSuccess: () => {
-          form.setFieldsValue({ appellation: trimmedName });
-          setNewAppellationName("");
-          setIsAddingAppellation(false);
-        }
-      });
-    }
-  };
-
-  const handleCancelAddAppellation = () => {
-    setNewAppellationName("");
-    setIsAddingAppellation(false);
-  };
-
-  // Handle new format creation
-  const handleAddFormat = () => {
-    if (newFormatName.trim()) {
-      const trimmedName = newFormatName.trim();
-      if (formats?.includes(trimmedName)) {
-        messageApi.warning("Format already exists");
-        return;
-      }
-      createFormatMutation.mutate(trimmedName, {
-        onSuccess: () => {
-          form.setFieldsValue({ format: trimmedName });
-          setNewFormatName("");
-          setIsAddingFormat(false);
-        }
-      });
-    }
-  };
-
-  const handleCancelAddFormat = () => {
-    setNewFormatName("");
-    setIsAddingFormat(false);
   };
 
   // Handle new location creation (client-side only, no API call needed)
@@ -582,53 +395,11 @@ export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetai
           label="Category"
           name="category"
         >
-          <Select
+          <CreatableSelect
+            options={categories || []}
+            createEndpoint="/api/categories"
+            queryKey="categories"
             placeholder="Select category"
-            allowClear
-            showSearch
-            options={categories?.map((cat: string) => ({ value: cat, label: cat }))}
-            filterOption={(input, option) =>
-              String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-            }
-            popupRender={(menu) => (
-              <div>
-                {menu}
-                <div style={{ borderTop: '1px solid #f0f0f0', padding: '8px' }}>
-                  {!isAddingCategory ? (
-                    <Button
-                      type="text"
-                      icon={<PlusOutlined />}
-                      onClick={() => setIsAddingCategory(true)}
-                      style={{ width: '100%', textAlign: 'left' }}
-                    >
-                      Add new category
-                    </Button>
-                  ) : (
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <Input
-                        placeholder="Category name"
-                        value={newCategoryName}
-                        onChange={(e) => setNewCategoryName(e.target.value)}
-                        onPressEnter={handleAddCategory}
-                        style={{ flex: 1 }}
-                        autoFocus
-                      />
-                      <Button 
-                        type="primary" 
-                        size="small" 
-                        onClick={handleAddCategory}
-                        loading={createCategoryMutation.isPending}
-                      >
-                        Add
-                      </Button>
-                      <Button size="small" onClick={handleCancelAddCategory}>
-                        Cancel
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           />
         </Form.Item>
 
@@ -636,53 +407,11 @@ export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetai
           label="Region"
           name="region"
         >
-          <Select
+          <CreatableSelect
+            options={regions || []}
+            createEndpoint="/api/regions"
+            queryKey="regions"
             placeholder="Select region"
-            allowClear
-            showSearch
-            options={regions?.map((region: string) => ({ value: region, label: region }))}
-            filterOption={(input, option) =>
-              String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-            }
-            popupRender={(menu) => (
-              <div>
-                {menu}
-                <div style={{ borderTop: '1px solid #f0f0f0', padding: '8px' }}>
-                  {!isAddingRegion ? (
-                    <Button
-                      type="text"
-                      icon={<PlusOutlined />}
-                      onClick={() => setIsAddingRegion(true)}
-                      style={{ width: '100%', textAlign: 'left' }}
-                    >
-                      Add new region
-                    </Button>
-                  ) : (
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <Input
-                        placeholder="Region name"
-                        value={newRegionName}
-                        onChange={(e) => setNewRegionName(e.target.value)}
-                        onPressEnter={handleAddRegion}
-                        style={{ flex: 1 }}
-                        autoFocus
-                      />
-                      <Button 
-                        type="primary" 
-                        size="small" 
-                        onClick={handleAddRegion}
-                        loading={createRegionMutation.isPending}
-                      >
-                        Add
-                      </Button>
-                      <Button size="small" onClick={handleCancelAddRegion}>
-                        Cancel
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           />
         </Form.Item>
 
@@ -690,53 +419,11 @@ export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetai
           label="Appellation"
           name="appellation"
         >
-          <Select
+          <CreatableSelect
+            options={appellations || []}
+            createEndpoint="/api/appellations"
+            queryKey="appellations"
             placeholder="Select appellation"
-            allowClear
-            showSearch
-            options={appellations?.map((appellation: string) => ({ value: appellation, label: appellation }))}
-            filterOption={(input, option) =>
-              String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-            }
-            popupRender={(menu) => (
-              <div>
-                {menu}
-                <div style={{ borderTop: '1px solid #f0f0f0', padding: '8px' }}>
-                  {!isAddingAppellation ? (
-                    <Button
-                      type="text"
-                      icon={<PlusOutlined />}
-                      onClick={() => setIsAddingAppellation(true)}
-                      style={{ width: '100%', textAlign: 'left' }}
-                    >
-                      Add new appellation
-                    </Button>
-                  ) : (
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <Input
-                        placeholder="Appellation name"
-                        value={newAppellationName}
-                        onChange={(e) => setNewAppellationName(e.target.value)}
-                        onPressEnter={handleAddAppellation}
-                        style={{ flex: 1 }}
-                        autoFocus
-                      />
-                      <Button 
-                        type="primary" 
-                        size="small" 
-                        onClick={handleAddAppellation}
-                        loading={createAppellationMutation.isPending}
-                      >
-                        Add
-                      </Button>
-                      <Button size="small" onClick={handleCancelAddAppellation}>
-                        Cancel
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           />
         </Form.Item>
 
@@ -744,53 +431,11 @@ export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetai
           label="Format"
           name="format"
         >
-          <Select
+          <CreatableSelect
+            options={formats || []}
+            createEndpoint="/api/formats"
+            queryKey="formats"
             placeholder="Select format"
-            allowClear
-            showSearch
-            options={formats?.map((fmt: string) => ({ value: fmt, label: fmt }))}
-            filterOption={(input, option) =>
-              String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-            }
-            popupRender={(menu) => (
-              <div>
-                {menu}
-                <div style={{ borderTop: '1px solid #f0f0f0', padding: '8px' }}>
-                  {!isAddingFormat ? (
-                    <Button
-                      type="text"
-                      icon={<PlusOutlined />}
-                      onClick={() => setIsAddingFormat(true)}
-                      style={{ width: '100%', textAlign: 'left' }}
-                    >
-                      Add new format
-                    </Button>
-                  ) : (
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <Input
-                        placeholder="Format name"
-                        value={newFormatName}
-                        onChange={(e) => setNewFormatName(e.target.value)}
-                        onPressEnter={handleAddFormat}
-                        style={{ flex: 1 }}
-                        autoFocus
-                      />
-                      <Button
-                        type="primary"
-                        size="small"
-                        onClick={handleAddFormat}
-                        loading={createFormatMutation.isPending}
-                      >
-                        Add
-                      </Button>
-                      <Button size="small" onClick={handleCancelAddFormat}>
-                        Cancel
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           />
         </Form.Item>
 
