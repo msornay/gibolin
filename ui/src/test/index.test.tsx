@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import React from "react";
 
 // Test the type exports to ensure they are properly defined
 import type { Reference, Purchase, RefsResponse } from "../index";
