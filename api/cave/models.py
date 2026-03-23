@@ -74,6 +74,23 @@ class Format(models.Model):
         return self.name
 
 
+class Grape(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="grapes",
+    )
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class Reference(models.Model):
     name = models.CharField(max_length=255)
     category = models.ForeignKey(
@@ -104,6 +121,7 @@ class Reference(models.Model):
         blank=True,
         related_name="references",
     )
+    grapes = models.ManyToManyField(Grape, blank=True, related_name="references")
     domain = models.CharField(max_length=255, null=True, blank=True)
     location = models.CharField(max_length=255, null=True, blank=True)
     vintage = models.IntegerField(null=True, blank=True)

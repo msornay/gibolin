@@ -13,7 +13,7 @@ from ninja.pagination import paginate as ninja_paginate
 from ninja.security import django_auth
 import sqids
 
-from .models import Reference, Purchase, Category, Region, Appellation, Format, MenuTemplate
+from .models import Reference, Purchase, Category, Region, Appellation, Format, Grape, MenuTemplate
 
 
 sqids = sqids.Sqids(min_length=8)
@@ -79,6 +79,7 @@ class ReferenceIn(ninja.Schema):
     region: Optional[str] = None
     appellation: Optional[str] = None
     format: Optional[str] = None
+    grapes: Optional[List[str]] = None
     domain: Optional[str] = None
     location: Optional[str] = None
     vintage: Optional[int] = None
@@ -130,6 +131,7 @@ class ReferenceOut(ninja.Schema):
     region: Optional[str]
     appellation: Optional[str]
     format: Optional[str]
+    grapes: List[str]
     domain: Optional[str]
     location: Optional[str]
     vintage: Optional[int]
@@ -160,6 +162,10 @@ class ReferenceOut(ninja.Schema):
     @staticmethod
     def resolve_format(obj):
         return obj.format.name if obj.format else None
+
+    @staticmethod
+    def resolve_grapes(obj):
+        return list(obj.grapes.values_list("name", flat=True))
 
     @staticmethod
     def resolve_retail_price(obj):
@@ -204,7 +210,14 @@ def create_reference(request, reference_in: ReferenceIn):
         fmt, _ = Format.objects.get_or_create(name=data["format"])
         data["format"] = fmt
 
+    grape_names = data.pop("grapes", None)
+
     reference = Reference.objects.create(**data)
+
+    if grape_names:
+        grape_objects = [Grape.objects.get_or_create(name=n)[0] for n in grape_names]
+        reference.grapes.set(grape_objects)
+
     return {"sqid": sqids.encode([reference.id])}
 
 
@@ -250,10 +263,19 @@ def update_reference(request, sqid: str, payload: ReferenceIn):
             reference.format = None
         del data["format"]
 
+    grape_names = data.pop("grapes", None)
+
     for attr, value in data.items():
         setattr(reference, attr, value)
 
     reference.save()
+
+    if grape_names is not None:
+        old_grapes = list(reference.grapes.all())
+        grape_objects = [Grape.objects.get_or_create(name=n)[0] for n in grape_names]
+        reference.grapes.set(grape_objects)
+        _cleanup_orphaned_lookups(old_grapes)
+
     _cleanup_orphaned_lookups(old_lookups)
     return reference
 
@@ -265,8 +287,9 @@ def delete_reference(request, sqid: str):
         reference.category, reference.region,
         reference.appellation, reference.format,
     ]
+    old_grapes = list(reference.grapes.all())
     reference.delete()
-    _cleanup_orphaned_lookups(old_lookups)
+    _cleanup_orphaned_lookups(old_lookups + old_grapes)
     return {}
 
 
@@ -285,6 +308,7 @@ def _search_word(word):
         Q(region__name__unaccent__icontains=word) |
         Q(appellation__name__unaccent__icontains=word) |
         Q(format__name__unaccent__icontains=word) |
+        Q(grapes__name__unaccent__icontains=word) |
         Q(notes__unaccent__icontains=word)
     )
 
@@ -386,6 +410,21 @@ def create_format(request, format_in: FormatIn):
     """Create a new format"""
     fmt, created = Format.objects.get_or_create(name=format_in.name)
     return {"name": fmt.name, "created": created}
+
+
+@api.get("/grapes", response=List[str])
+def list_grapes(request):
+    return list(Grape.objects.values_list("name", flat=True))
+
+
+class GrapeIn(ninja.Schema):
+    name: str
+
+
+@api.post("/grapes")
+def create_grape(request, grape_in: GrapeIn):
+    grape, created = Grape.objects.get_or_create(name=grape_in.name)
+    return {"name": grape.name, "created": created}
 
 
 class CategoryColorIn(ninja.Schema):

@@ -5,25 +5,38 @@ import { API_BASE_URL, apiFetch } from "@/api";
 
 const CREATE_PREFIX = "__create__";
 
+type SingleProps = {
+  mode?: undefined;
+  value?: string;
+  onChange?: (value: string | undefined) => void;
+};
+
+type MultipleProps = {
+  mode: "multiple";
+  value?: string[];
+  onChange?: (value: string[]) => void;
+};
+
 type CreatableSelectProps = {
   options: string[];
   createEndpoint: string;
   queryKey: string;
   placeholder: string;
-  value?: string;
-  onChange?: (value: string | undefined) => void;
   allowClear?: boolean;
-};
+} & (SingleProps | MultipleProps);
 
-export function CreatableSelect({
-  options,
-  createEndpoint,
-  queryKey,
-  placeholder,
-  value,
-  onChange,
-  allowClear = true,
-}: CreatableSelectProps) {
+export function CreatableSelect(props: CreatableSelectProps) {
+  const {
+    options,
+    createEndpoint,
+    queryKey,
+    placeholder,
+    value,
+    onChange,
+    allowClear = true,
+    mode,
+  } = props;
+
   const [searchValue, setSearchValue] = React.useState("");
   const queryClient = useQueryClient();
 
@@ -68,12 +81,19 @@ export function CreatableSelect({
       const name = selected.slice(CREATE_PREFIX.length);
       createMutation.mutate(name, {
         onSuccess: () => {
-          onChange?.(name);
+          if (mode === "multiple") {
+            const current = (value as string[]) || [];
+            (onChange as (v: string[]) => void)?.([...current, name]);
+          } else {
+            (onChange as (v: string | undefined) => void)?.(name);
+          }
           setSearchValue("");
         },
       });
     } else {
-      onChange?.(selected);
+      if (mode !== "multiple") {
+        (onChange as (v: string | undefined) => void)?.(selected);
+      }
       setSearchValue("");
     }
   };
@@ -83,14 +103,22 @@ export function CreatableSelect({
       showSearch
       allowClear={allowClear}
       placeholder={placeholder}
-      value={value}
+      value={value as string & string[]}
       searchValue={searchValue}
       onSearch={setSearchValue}
       onSelect={handleSelect}
-      onClear={() => onChange?.(undefined)}
+      onClear={() => {
+        if (mode === "multiple") {
+          (onChange as (v: string[]) => void)?.([]);
+        } else {
+          (onChange as (v: string | undefined) => void)?.(undefined);
+        }
+      }}
       filterOption={false}
       options={selectOptions}
       loading={createMutation.isPending}
+      mode={mode}
+      onChange={mode === "multiple" ? (onChange as (v: string[]) => void) : undefined}
     />
   );
 }

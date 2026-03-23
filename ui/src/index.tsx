@@ -47,6 +47,7 @@ export type Reference = {
   region?: string;
   appellation?: string;
   format?: string;
+  grapes?: string[];
   domain?: string;
   location?: string;
   vintage?: number;

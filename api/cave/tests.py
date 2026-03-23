@@ -3,7 +3,7 @@ import json
 
 from users.models import User
 from .auth import GibolinOIDCBackend
-from .models import Reference, Purchase, Category, Region, Appellation, Format, MenuTemplate
+from .models import Reference, Purchase, Category, Region, Appellation, Format, Grape, MenuTemplate
 from .api import (
     sqid_encode, sqid_decode, _parse_menu_template,
     _build_wine_data, _build_appellation_list, _build_region_list,
@@ -1436,6 +1436,109 @@ class OIDCBackendTest(TestCase):
         backend = GibolinOIDCBackend()
         result = backend.create_user({"email": "new@example.com"})
         self.assertIsNone(result)
+
+
+class GrapeTest(AuthenticatedTestCase):
+    def test_list_grapes(self):
+        Grape.objects.create(name="Merlot")
+        Grape.objects.create(name="Syrah")
+        response = self.client.get("/api/grapes")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("Merlot", data)
+        self.assertIn("Syrah", data)
+
+    def test_create_grape(self):
+        response = self.client.post(
+            "/api/grapes",
+            json.dumps({"name": "Pinot Noir"}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Grape.objects.filter(name="Pinot Noir").exists())
+
+    def test_create_ref_with_grapes(self):
+        data = {"name": "Blend Wine", "grapes": ["Merlot", "Cabernet Sauvignon"]}
+        response = self.client.post(
+            "/api/ref", json.dumps(data), content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+        ref = Reference.objects.get(name="Blend Wine")
+        grape_names = list(ref.grapes.values_list("name", flat=True))
+        self.assertCountEqual(grape_names, ["Merlot", "Cabernet Sauvignon"])
+
+    def test_update_ref_grapes(self):
+        ref = Reference.objects.create(name="Wine")
+        sqid = sqid_encode(ref.id)
+        data = {"name": "Wine", "grapes": ["Syrah", "Grenache"]}
+        response = self.client.put(
+            f"/api/ref/{sqid}", json.dumps(data), content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+        ref.refresh_from_db()
+        grape_names = list(ref.grapes.values_list("name", flat=True))
+        self.assertCountEqual(grape_names, ["Syrah", "Grenache"])
+
+    def test_get_ref_returns_grapes(self):
+        ref = Reference.objects.create(name="Wine")
+        g1 = Grape.objects.create(name="Chardonnay")
+        ref.grapes.add(g1)
+        sqid = sqid_encode(ref.id)
+        response = self.client.get(f"/api/ref/{sqid}")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["grapes"], ["Chardonnay"])
+
+    def test_ref_without_grapes(self):
+        data = {"name": "No Grape Wine"}
+        response = self.client.post(
+            "/api/ref", json.dumps(data), content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+        sqid = response.json()["sqid"]
+        response = self.client.get(f"/api/ref/{sqid}")
+        self.assertEqual(response.json()["grapes"], [])
+
+    def test_orphan_grape_deleted_on_update(self):
+        ref = Reference.objects.create(name="Wine")
+        grape = Grape.objects.create(name="OldGrape")
+        ref.grapes.add(grape)
+        sqid = sqid_encode(ref.id)
+        data = {"name": "Wine", "grapes": ["NewGrape"]}
+        self.client.put(
+            f"/api/ref/{sqid}", json.dumps(data), content_type="application/json"
+        )
+        self.assertFalse(Grape.objects.filter(name="OldGrape").exists())
+
+    def test_shared_grape_kept_on_update(self):
+        grape = Grape.objects.create(name="SharedGrape")
+        ref_a = Reference.objects.create(name="Wine A")
+        ref_a.grapes.add(grape)
+        ref_b = Reference.objects.create(name="Wine B")
+        ref_b.grapes.add(grape)
+        sqid = sqid_encode(ref_b.id)
+        data = {"name": "Wine B", "grapes": ["Other"]}
+        self.client.put(
+            f"/api/ref/{sqid}", json.dumps(data), content_type="application/json"
+        )
+        self.assertTrue(Grape.objects.filter(name="SharedGrape").exists())
+
+    def test_orphan_grape_deleted_on_ref_delete(self):
+        ref = Reference.objects.create(name="Wine")
+        grape = Grape.objects.create(name="LonelyGrape")
+        ref.grapes.add(grape)
+        sqid = sqid_encode(ref.id)
+        self.client.delete(f"/api/ref/{sqid}")
+        self.assertFalse(Grape.objects.filter(name="LonelyGrape").exists())
+
+    def test_search_matches_grape(self):
+        ref = Reference.objects.create(name="Wine")
+        grape = Grape.objects.create(name="Tempranillo")
+        ref.grapes.add(grape)
+        response = self.client.get("/api/refs?search=Tempranillo")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["count"], 1)
+        self.assertEqual(data["items"][0]["name"], "Wine")
 
 
 class OrphanLookupCleanupTest(AuthenticatedTestCase):

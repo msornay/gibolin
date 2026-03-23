@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from cave.models import Category, Region, Appellation, Format, Reference, Purchase
+from cave.models import Category, Region, Appellation, Format, Grape, Reference, Purchase
 from users.models import User
 
 
@@ -28,6 +28,7 @@ class Command(BaseCommand):
             Appellation.objects.all().delete()
             Region.objects.all().delete()
             Category.objects.all().delete()
+            Grape.objects.all().delete()
 
         with transaction.atomic():
             self.create_dev_user()
@@ -35,6 +36,7 @@ class Command(BaseCommand):
             self.create_regions()
             self.create_appellations()
             self.create_formats()
+            self.create_grapes()
             self.create_references()
             self.create_purchases()
 
@@ -46,6 +48,7 @@ class Command(BaseCommand):
                 f"- {Region.objects.count()} regions\n"
                 f"- {Appellation.objects.count()} appellations\n"
                 f"- {Format.objects.count()} formats\n"
+                f"- {Grape.objects.count()} grapes\n"
                 f"- {Reference.objects.count()} references\n"
                 f"- {Purchase.objects.count()} purchases"
             )
@@ -184,6 +187,15 @@ class Command(BaseCommand):
         formats = ["Standard", "Clavelin", "Magnum", "Jéroboam"]
         for name in formats:
             Format.objects.get_or_create(name=name)
+
+    def create_grapes(self):
+        """Create grape varieties"""
+        grapes = [
+            "Chardonnay", "Pinot Noir", "Merlot", "Cabernet Sauvignon",
+            "Syrah", "Gamay", "Sauvignon Blanc", "Chenin Blanc",
+        ]
+        for name in grapes:
+            Grape.objects.get_or_create(name=name)
 
     @staticmethod
     def _location_for_region(region_name):

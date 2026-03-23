@@ -80,6 +80,13 @@ export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetai
       fetch(`${API_BASE_URL}/api/formats`).then(res => res.json()),
   });
 
+  // Fetch grapes
+  const { data: grapes } = useQuery({
+    queryKey: ['grapes'],
+    queryFn: () =>
+      fetch(`${API_BASE_URL}/api/grapes`).then(res => res.json()),
+  });
+
   // Fetch locations
   const { data: locations } = useQuery({
     queryKey: ['locations'],
@@ -114,6 +121,7 @@ export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetai
       queryClient.invalidateQueries({ queryKey: ["appellations"] });
       queryClient.invalidateQueries({ queryKey: ["locations"] });
       queryClient.invalidateQueries({ queryKey: ["formats"] });
+      queryClient.invalidateQueries({ queryKey: ["grapes"] });
       queryClient.invalidateQueries({ queryKey: ["reference", reference?.sqid] });
       messageApi.success("Reference updated successfully");
       onClose();
@@ -138,6 +146,7 @@ export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetai
       queryClient.invalidateQueries({ queryKey: ["appellations"] });
       queryClient.invalidateQueries({ queryKey: ["locations"] });
       queryClient.invalidateQueries({ queryKey: ["formats"] });
+      queryClient.invalidateQueries({ queryKey: ["grapes"] });
       messageApi.success("Reference created successfully");
       onClose();
     },
@@ -291,6 +300,7 @@ export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetai
         region: referenceData.region,
         appellation: referenceData.appellation,
         format: referenceData.format || undefined,
+        grapes: referenceData.grapes || [],
         domain: referenceData.domain,
         location: referenceData.location || undefined,
         vintage: referenceData.vintage,
@@ -307,6 +317,7 @@ export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetai
         region: undefined,
         appellation: undefined,
         format: undefined,
+        grapes: [],
         domain: "",
         location: undefined,
         vintage: new Date().getFullYear(),
@@ -383,6 +394,7 @@ export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetai
           region: undefined,
           appellation: undefined,
           format: undefined,
+          grapes: [],
           domain: "",
           location: undefined,
           vintage: new Date().getFullYear(),
@@ -446,6 +458,19 @@ export function ReferenceDetails({ reference, onClose, formRef }: ReferenceDetai
             createEndpoint="/api/formats"
             queryKey="formats"
             placeholder="Select format"
+          />
+        </Form.Item>
+
+        <Form.Item
+          label="Grapes"
+          name="grapes"
+        >
+          <CreatableSelect
+            options={grapes || []}
+            createEndpoint="/api/grapes"
+            queryKey="grapes"
+            placeholder="Select grapes"
+            mode="multiple"
           />
         </Form.Item>
 
