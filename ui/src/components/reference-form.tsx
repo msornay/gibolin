@@ -52,6 +52,8 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
   const [isAddingRegion, setIsAddingRegion] = React.useState(false);
   const [newAppellationName, setNewAppellationName] = React.useState("");
   const [isAddingAppellation, setIsAddingAppellation] = React.useState(false);
+  const [newFormatName, setNewFormatName] = React.useState("");
+  const [isAddingFormat, setIsAddingFormat] = React.useState(false);
   const [newLocationName, setNewLocationName] = React.useState("");
   const [isAddingLocation, setIsAddingLocation] = React.useState(false);
   const [addedLocations, setAddedLocations] = React.useState<string[]>([]);
@@ -75,6 +77,13 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
     queryKey: ['appellations'],
     queryFn: () =>
       fetch(`${API_BASE_URL}/api/appellations`).then(res => res.json()),
+  });
+
+  // Fetch formats
+  const { data: formats, refetch: refetchFormats } = useQuery({
+    queryKey: ['formats'],
+    queryFn: () =>
+      fetch(`${API_BASE_URL}/api/formats`).then(res => res.json()),
   });
 
   // Fetch locations
@@ -110,10 +119,12 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
       queryClient.invalidateQueries({ queryKey: ["regions"] });
       queryClient.invalidateQueries({ queryKey: ["appellations"] });
       queryClient.invalidateQueries({ queryKey: ["locations"] });
+      queryClient.invalidateQueries({ queryKey: ["formats"] });
       queryClient.invalidateQueries({ queryKey: ["reference", reference?.sqid] });
-      refetchCategories(); // Force refetch categories
-      refetchRegions(); // Force refetch regions
-      refetchAppellations(); // Force refetch appellations
+      refetchCategories();
+      refetchRegions();
+      refetchAppellations();
+      refetchFormats();
       messageApi.success("Reference updated successfully");
       onClose();
     },
@@ -173,6 +184,23 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
     },
   });
 
+  // Create format mutation
+  const createFormatMutation = useMutation({
+    mutationFn: (formatName: string) =>
+      apiFetch(`${API_BASE_URL}/api/formats`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: formatName }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["formats"] });
+      messageApi.success("Format created successfully");
+    },
+    onError: () => {
+      messageApi.error("Failed to create format");
+    },
+  });
+
   // Create reference mutation
   const createMutation = useMutation({
     mutationFn: (values: Record<string, unknown>) =>
@@ -187,9 +215,11 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
       queryClient.invalidateQueries({ queryKey: ["regions"] });
       queryClient.invalidateQueries({ queryKey: ["appellations"] });
       queryClient.invalidateQueries({ queryKey: ["locations"] });
+      queryClient.invalidateQueries({ queryKey: ["formats"] });
       refetchCategories();
       refetchRegions();
       refetchAppellations();
+      refetchFormats();
       messageApi.success("Reference created successfully");
       onClose();
     },
@@ -382,6 +412,29 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
     setIsAddingAppellation(false);
   };
 
+  // Handle new format creation
+  const handleAddFormat = () => {
+    if (newFormatName.trim()) {
+      const trimmedName = newFormatName.trim();
+      if (formats?.includes(trimmedName)) {
+        messageApi.warning("Format already exists");
+        return;
+      }
+      createFormatMutation.mutate(trimmedName, {
+        onSuccess: () => {
+          form.setFieldsValue({ format: trimmedName });
+          setNewFormatName("");
+          setIsAddingFormat(false);
+        }
+      });
+    }
+  };
+
+  const handleCancelAddFormat = () => {
+    setNewFormatName("");
+    setIsAddingFormat(false);
+  };
+
   // Handle new location creation (client-side only, no API call needed)
   const handleAddLocation = () => {
     if (newLocationName.trim()) {
@@ -411,6 +464,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
         category: referenceData.category,
         region: referenceData.region,
         appellation: referenceData.appellation,
+        format: referenceData.format || undefined,
         domain: referenceData.domain,
         location: referenceData.location || undefined,
         vintage: referenceData.vintage,
@@ -425,6 +479,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
         category: undefined,
         region: undefined,
         appellation: undefined,
+        format: undefined,
         domain: "",
         location: undefined,
         vintage: new Date().getFullYear(),
@@ -499,6 +554,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
           category: undefined,
           region: undefined,
           appellation: undefined,
+          format: undefined,
           domain: "",
           location: undefined,
           vintage: new Date().getFullYear(),
@@ -668,6 +724,60 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
                         Add
                       </Button>
                       <Button size="small" onClick={handleCancelAddAppellation}>
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          />
+        </Form.Item>
+
+        <Form.Item
+          label="Format"
+          name="format"
+        >
+          <Select
+            placeholder="Select format"
+            allowClear
+            showSearch
+            options={formats?.map((fmt: string) => ({ value: fmt, label: fmt }))}
+            filterOption={(input, option) =>
+              String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+            }
+            popupRender={(menu) => (
+              <div>
+                {menu}
+                <div style={{ borderTop: '1px solid #f0f0f0', padding: '8px' }}>
+                  {!isAddingFormat ? (
+                    <Button
+                      type="text"
+                      icon={<PlusOutlined />}
+                      onClick={() => setIsAddingFormat(true)}
+                      style={{ width: '100%', textAlign: 'left' }}
+                    >
+                      Add new format
+                    </Button>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <Input
+                        placeholder="Format name"
+                        value={newFormatName}
+                        onChange={(e) => setNewFormatName(e.target.value)}
+                        onPressEnter={handleAddFormat}
+                        style={{ flex: 1 }}
+                        autoFocus
+                      />
+                      <Button
+                        type="primary"
+                        size="small"
+                        onClick={handleAddFormat}
+                        loading={createFormatMutation.isPending}
+                      >
+                        Add
+                      </Button>
+                      <Button size="small" onClick={handleCancelAddFormat}>
                         Cancel
                       </Button>
                     </div>

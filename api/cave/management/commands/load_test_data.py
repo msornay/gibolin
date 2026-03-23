@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from cave.models import Category, Region, Appellation, Reference, Purchase
+from cave.models import Category, Region, Appellation, Format, Reference, Purchase
 from users.models import User
 
 
@@ -24,6 +24,7 @@ class Command(BaseCommand):
             self.stdout.write("Clearing existing data...")
             Purchase.objects.all().delete()
             Reference.objects.all().delete()
+            Format.objects.all().delete()
             Appellation.objects.all().delete()
             Region.objects.all().delete()
             Category.objects.all().delete()
@@ -33,6 +34,7 @@ class Command(BaseCommand):
             self.create_categories()
             self.create_regions()
             self.create_appellations()
+            self.create_formats()
             self.create_references()
             self.create_purchases()
 
@@ -43,6 +45,7 @@ class Command(BaseCommand):
                 f"- {Category.objects.count()} categories\n"
                 f"- {Region.objects.count()} regions\n"
                 f"- {Appellation.objects.count()} appellations\n"
+                f"- {Format.objects.count()} formats\n"
                 f"- {Reference.objects.count()} references\n"
                 f"- {Purchase.objects.count()} purchases"
             )
@@ -175,6 +178,12 @@ class Command(BaseCommand):
 
         for name in appellations:
             Appellation.objects.get_or_create(name=name)
+
+    def create_formats(self):
+        """Create bottle formats"""
+        formats = ["Standard", "Clavelin", "Magnum", "Jéroboam"]
+        for name in formats:
+            Format.objects.get_or_create(name=name)
 
     @staticmethod
     def _location_for_region(region_name):

@@ -3,7 +3,7 @@ import json
 
 from users.models import User
 from .auth import GibolinOIDCBackend
-from .models import Reference, Purchase, Category, Region, Appellation, MenuTemplate
+from .models import Reference, Purchase, Category, Region, Appellation, Format, MenuTemplate
 from .api import (
     sqid_encode, sqid_decode, _parse_menu_template,
     _build_wine_data, _build_appellation_list, _build_region_list,
@@ -41,6 +41,93 @@ class ReferenceModelTest(TestCase):
         self.assertIsNone(reference.category)
         self.assertIsNone(reference.domain)
         self.assertIsNone(reference.vintage)
+
+
+class FormatModelTest(TestCase):
+    def test_format_creation(self):
+        """Test basic format creation"""
+        fmt = Format.objects.create(name="Magnum")
+        self.assertEqual(fmt.name, "Magnum")
+        self.assertEqual(str(fmt), "Magnum")
+
+    def test_reference_with_format(self):
+        """Test reference with format FK"""
+        fmt = Format.objects.create(name="Standard")
+        ref = Reference.objects.create(name="Test Wine", format=fmt)
+        self.assertEqual(ref.format.name, "Standard")
+
+    def test_reference_format_optional(self):
+        """Test reference without format"""
+        ref = Reference.objects.create(name="Test Wine")
+        self.assertIsNone(ref.format)
+
+
+class FormatAPITest(AuthenticatedTestCase):
+    def test_list_formats(self):
+        """GET /api/formats returns list of format names"""
+        Format.objects.create(name="Magnum")
+        Format.objects.create(name="Standard")
+        response = self.client.get("/api/formats")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("Magnum", data)
+        self.assertIn("Standard", data)
+
+    def test_create_format(self):
+        """POST /api/formats creates a format"""
+        response = self.client.post(
+            "/api/formats",
+            json.dumps({"name": "Jéroboam"}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Format.objects.filter(name="Jéroboam").exists())
+
+    def test_create_reference_with_format(self):
+        """POST /api/ref with format creates reference with format FK"""
+        data = {
+            "name": "Chablis",
+            "category": "White",
+            "format": "Magnum",
+        }
+        response = self.client.post(
+            "/api/ref", json.dumps(data), content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+        ref = Reference.objects.get(name="Chablis")
+        self.assertEqual(ref.format.name, "Magnum")
+
+    def test_update_reference_format(self):
+        """PUT /api/ref/{sqid} can change format"""
+        fmt = Format.objects.create(name="Standard")
+        ref = Reference.objects.create(name="Wine", format=fmt)
+        sqid = sqid_encode(ref.id)
+        data = {"name": "Wine", "format": "Magnum"}
+        response = self.client.put(
+            f"/api/ref/{sqid}",
+            json.dumps(data),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        ref.refresh_from_db()
+        self.assertEqual(ref.format.name, "Magnum")
+
+    def test_reference_response_includes_format(self):
+        """GET /api/ref/{sqid} response includes format field"""
+        fmt = Format.objects.create(name="Clavelin")
+        ref = Reference.objects.create(name="Vin Jaune", format=fmt)
+        sqid = sqid_encode(ref.id)
+        response = self.client.get(f"/api/ref/{sqid}")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["format"], "Clavelin")
+
+    def test_reference_response_format_null(self):
+        """GET /api/ref/{sqid} returns null format when not set"""
+        ref = Reference.objects.create(name="Wine")
+        sqid = sqid_encode(ref.id)
+        response = self.client.get(f"/api/ref/{sqid}")
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["format"])
 
 
 class SqidUtilsTest(TestCase):

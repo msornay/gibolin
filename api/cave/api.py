@@ -13,7 +13,7 @@ from ninja.pagination import paginate as ninja_paginate
 from ninja.security import django_auth
 import sqids
 
-from .models import Reference, Purchase, Category, Region, Appellation, MenuTemplate
+from .models import Reference, Purchase, Category, Region, Appellation, Format, MenuTemplate
 
 
 sqids = sqids.Sqids(min_length=8)
@@ -78,6 +78,7 @@ class ReferenceIn(ninja.Schema):
     category: Optional[str] = None
     region: Optional[str] = None
     appellation: Optional[str] = None
+    format: Optional[str] = None
     domain: Optional[str] = None
     location: Optional[str] = None
     vintage: Optional[int] = None
@@ -127,6 +128,7 @@ class ReferenceOut(ninja.Schema):
     category: Optional[str]
     region: Optional[str]
     appellation: Optional[str]
+    format: Optional[str]
     domain: Optional[str]
     location: Optional[str]
     vintage: Optional[int]
@@ -152,6 +154,10 @@ class ReferenceOut(ninja.Schema):
     @staticmethod
     def resolve_appellation(obj):
         return obj.appellation.name if obj.appellation else None
+
+    @staticmethod
+    def resolve_format(obj):
+        return obj.format.name if obj.format else None
 
     @staticmethod
     def resolve_retail_price(obj):
@@ -186,6 +192,10 @@ def create_reference(request, reference_in: ReferenceIn):
         appellation, _ = Appellation.objects.get_or_create(name=data["appellation"])
         data["appellation"] = appellation
 
+    if data.get("format"):
+        fmt, _ = Format.objects.get_or_create(name=data["format"])
+        data["format"] = fmt
+
     reference = Reference.objects.create(**data)
     return {"sqid": sqids.encode([reference.id])}
 
@@ -219,6 +229,14 @@ def update_reference(request, sqid: str, payload: ReferenceIn):
             reference.appellation = None
         del data["appellation"]
 
+    if "format" in data:
+        if data["format"]:
+            fmt, _ = Format.objects.get_or_create(name=data["format"])
+            reference.format = fmt
+        else:
+            reference.format = None
+        del data["format"]
+
     for attr, value in data.items():
         setattr(reference, attr, value)
 
@@ -246,7 +264,8 @@ def _search_word(word):
         Q(location__unaccent__icontains=word) |
         Q(category__name__unaccent__icontains=word) |
         Q(region__name__unaccent__icontains=word) |
-        Q(appellation__name__unaccent__icontains=word)
+        Q(appellation__name__unaccent__icontains=word) |
+        Q(format__name__unaccent__icontains=word)
     )
 
 
@@ -330,6 +349,23 @@ def create_appellation(request, appellation_in: AppellationIn):
     """Create a new appellation"""
     appellation, created = Appellation.objects.get_or_create(name=appellation_in.name)
     return {"name": appellation.name, "created": created}
+
+
+@api.get("/formats", response=List[str])
+def list_formats(request):
+    """Get all formats"""
+    return list(Format.objects.values_list("name", flat=True))
+
+
+class FormatIn(ninja.Schema):
+    name: str
+
+
+@api.post("/formats")
+def create_format(request, format_in: FormatIn):
+    """Create a new format"""
+    fmt, created = Format.objects.get_or_create(name=format_in.name)
+    return {"name": fmt.name, "created": created}
 
 
 class CategoryColorIn(ninja.Schema):

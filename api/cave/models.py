@@ -57,6 +57,23 @@ class Appellation(models.Model):
         return self.name
 
 
+class Format(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="formats",
+    )
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class Reference(models.Model):
     name = models.CharField(max_length=255)
     category = models.ForeignKey(
@@ -75,6 +92,13 @@ class Reference(models.Model):
     )
     appellation = models.ForeignKey(
         Appellation,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="references",
+    )
+    format = models.ForeignKey(
+        Format,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

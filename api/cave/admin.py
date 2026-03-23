@@ -1,1 +1,10 @@
-# Register your models here.
+from django.contrib import admin
+
+from .models import Category, Region, Appellation, Format, Reference, Purchase
+
+admin.site.register(Category)
+admin.site.register(Region)
+admin.site.register(Appellation)
+admin.site.register(Format)
+admin.site.register(Reference)
+admin.site.register(Purchase)

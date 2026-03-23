@@ -46,6 +46,7 @@ export type Reference = {
   category?: string;
   region?: string;
   appellation?: string;
+  format?: string;
   domain?: string;
   location?: string;
   vintage?: number;
@@ -357,6 +358,17 @@ function ReferenceTable() {
         return aVal.toLowerCase().localeCompare(bVal.toLowerCase());
       },
       render: (appellation) => appellation || "-",
+    },
+    {
+      title: "Format",
+      dataIndex: "format",
+      key: "format",
+      sorter: (a, b) => {
+        const aVal = a.format || "";
+        const bVal = b.format || "";
+        return aVal.toLowerCase().localeCompare(bVal.toLowerCase());
+      },
+      render: (format) => format || "-",
     },
     {
       title: "Actions",
