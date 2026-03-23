@@ -1,0 +1,6 @@
+#!/bin/sh
+set -e
+GIT_WORK_TREE=~/gibolin git checkout -f
+cd ~/gibolin
+docker compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml up -d

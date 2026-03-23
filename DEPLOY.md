@@ -1,82 +1,67 @@
-# Deploying to Clever Cloud
+# Deploying to VPS
 
-These are the human-only steps. Code changes (settings, whitenoise, gunicorn, etc.) are already in place.
+Docker-based deployment via git push. Accessed via SSH tunnel.
 
-## 1. Create the app
+## Prerequisites
 
-```bash
-clever create gibolin --type python
-```
+A VPS with Docker and Docker Compose installed. SSH access configured as `vps` in `~/.ssh/config`.
 
-Or use the console: create a **Python** application.
-
-## 2. Create and link PostgreSQL
+## 1. First-time setup
 
 ```bash
-clever addon create postgresql-addon --plan dev gibolin-pg
-clever addon link gibolin-pg
+make setup-vps
 ```
 
-This injects `POSTGRESQL_ADDON_HOST`, `POSTGRESQL_ADDON_PORT`, `POSTGRESQL_ADDON_DB`, `POSTGRESQL_ADDON_USER`, `POSTGRESQL_ADDON_PASSWORD` automatically.
+This creates a bare git repo on the VPS, installs the post-receive hook, and adds the `vps` git remote locally.
 
-## 3. Set environment variables
+Then place the env file on the VPS:
 
 ```bash
-clever env set SECRET_KEY "$(python3 -c 'import secrets; print(secrets.token_urlsafe(50))')"
-clever env set DEBUG "false"
-clever env set ALLOWED_HOSTS "gibolin.cleverapps.io"
-clever env set CC_PRE_BUILD_HOOK "cd ui && npm install && npm run build"
-clever env set OIDC_RP_CLIENT_ID "your-google-client-id"
-clever env set OIDC_RP_CLIENT_SECRET "your-google-client-secret"
+scp .env.prod.example vps:~/gibolin/.env.prod
+ssh vps 'nano ~/gibolin/.env.prod'
 ```
 
-`OIDC_RP_CLIENT_ID` and `OIDC_RP_CLIENT_SECRET` come from Google Cloud Console OAuth 2.0 credentials. Set the authorized redirect URI to `https://gibolin.cleverapps.io/oidc/callback/`.
-
-`CC_PYTHON_MODULE` is already set in `clevercloud/python.json` — no need to set it as an env var.
-
-Adjust `ALLOWED_HOSTS` if using a custom domain.
-
-## 4. Deploy
+Generate a secret key for the env file:
 
 ```bash
-clever deploy
+python3 -c 'import secrets; print(secrets.token_urlsafe(50))'
 ```
 
-Or push to the Clever Cloud git remote.
-
-## 5. Verify unaccent extension
-
-Connect to the database and check:
-
-```sql
-SELECT extname FROM pg_extension WHERE extname = 'unaccent';
-```
-
-If missing, the search will break on accented characters. On Clever Cloud managed PostgreSQL, `CREATE EXTENSION unaccent` should work — run it via:
+## 2. Deploy
 
 ```bash
-clever pg psql
-CREATE EXTENSION IF NOT EXISTS unaccent;
+make deploy
 ```
 
-Also ensure the `simple_unaccent` text search config exists (see `postgres/init.sql` for the definition).
+This pushes to the VPS bare repo. The post-receive hook checks out the code, builds the Docker image, and restarts the stack. The Makefile then waits for the healthcheck to pass.
 
-## 6. Seed data (optional)
+## 3. Create a superuser
 
 ```bash
-clever ssh
-python manage.py load_test_data --clear
+make prod-createsuperuser
 ```
 
-Or use the admin at `https://gibolin.cleverapps.io/backoffice/`.
-
-## 7. Create allowed users
-
-Users must be pre-created in the admin to allow Google OIDC login. No self-registration.
+## 4. Access the app
 
 ```bash
-clever ssh
-python manage.py createsuperuser
+ssh -L 8000:localhost:8000 vps
 ```
 
-Then add allowed users via the admin at `/backoffice/`.
+Open http://localhost:8000/. Log in via http://localhost:8000/backoffice/.
+
+## Operations
+
+```bash
+make prod-logs        # tail logs
+make prod-shell       # Django shell
+make prod-up          # start
+make prod-down        # stop
+```
+
+## Database
+
+Data lives on the host filesystem at `~/gibolin/data/postgres/`. Back it up with:
+
+```bash
+ssh vps 'cd ~/gibolin && docker compose -f docker-compose.prod.yml exec postgres pg_dump -U gibolin gibolin > backup.sql'
+```

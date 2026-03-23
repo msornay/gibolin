@@ -175,7 +175,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Session security
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SECURE = not DEBUG
+_scs = os.getenv("SESSION_COOKIE_SECURE")
+SESSION_COOKIE_SECURE = _scs.lower() in ("true", "1", "yes") if _scs is not None else not DEBUG
 SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_AGE = 86400 * 7  # 1 week
 

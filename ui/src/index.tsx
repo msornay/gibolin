@@ -507,7 +507,7 @@ function ReferenceTable() {
               setCurrentPage(1);
             }
           },
-          onShowSizeChange: (current, size) => {
+          onShowSizeChange: (_current, size) => {
             setPageSize(size);
             setCurrentPage(1);
           },

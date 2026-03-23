@@ -526,7 +526,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
             showSearch
             options={categories?.map((cat: string) => ({ value: cat, label: cat }))}
             filterOption={(input, option) =>
-              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
             }
             popupRender={(menu) => (
               <div>
@@ -580,7 +580,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
             showSearch
             options={regions?.map((region: string) => ({ value: region, label: region }))}
             filterOption={(input, option) =>
-              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
             }
             popupRender={(menu) => (
               <div>
@@ -634,7 +634,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
             showSearch
             options={appellations?.map((appellation: string) => ({ value: appellation, label: appellation }))}
             filterOption={(input, option) =>
-              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
             }
             popupRender={(menu) => (
               <div>
@@ -695,7 +695,7 @@ export function ReferenceDetails({ reference, onClose }: ReferenceDetailsProps) 
             showSearch
             options={[...(locations || []), ...addedLocations].map((loc: string) => ({ value: loc, label: loc }))}
             filterOption={(input, option) =>
-              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
             }
             popupRender={(menu) => (
               <div>

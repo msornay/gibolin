@@ -1,6 +1,0 @@
-{
-  "deploy": {
-    "module": "gibolin.wsgi:application",
-    "manageTasks": ["migrate", "collectstatic --noinput"]
-  }
-}
