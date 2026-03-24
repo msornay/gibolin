@@ -360,67 +360,6 @@ class ReferenceAPITest(AuthenticatedTestCase):
             response.status_code, 422
         )  # Validation error due to extra field
 
-    def test_stats_empty_database(self):
-        """Test stats endpoint with empty database"""
-        Reference.objects.all().delete()
-        response = self.client.get("/api/stats")
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertEqual(data["total_references"], 0)
-        self.assertEqual(data["total_bottles"], 0)
-        self.assertEqual(data["total_value"], 0)
-
-    def test_stats_references_without_purchases(self):
-        """Test stats with references but no purchases"""
-        response = self.client.get("/api/stats")
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertEqual(data["total_references"], 1)
-        self.assertEqual(data["total_bottles"], self.reference.current_quantity)
-        self.assertEqual(data["total_value"], 0)
-
-    def test_stats_with_purchases(self):
-        """Test stats calculates value using average price × current_quantity"""
-        self.reference.current_quantity = 4
-        self.reference.save()
-        # Add purchases: 6 @ €10, 6 @ €20 → avg = €15
-        Purchase.objects.create(
-            reference=self.reference, date="2023-01-01", quantity=6, price=10.00
-        )
-        Purchase.objects.create(
-            reference=self.reference, date="2023-02-01", quantity=6, price=20.00
-        )
-        # Expected value: avg(15) × current_qty(4) = 60
-
-        response = self.client.get("/api/stats")
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertEqual(data["total_references"], 1)
-        self.assertEqual(data["total_bottles"], 4)
-        self.assertEqual(data["total_value"], 60.0)
-
-    def test_stats_multiple_references(self):
-        """Test stats sums across multiple references"""
-        self.reference.current_quantity = 2
-        self.reference.save()
-        Purchase.objects.create(
-            reference=self.reference, date="2023-01-01", quantity=4, price=10.00
-        )
-        # Ref 1: avg=10, qty=2 → value=20
-
-        ref2 = Reference.objects.create(name="Wine 2", current_quantity=3)
-        Purchase.objects.create(
-            reference=ref2, date="2023-01-01", quantity=6, price=20.00
-        )
-        # Ref 2: avg=20, qty=3 → value=60
-
-        response = self.client.get("/api/stats")
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertEqual(data["total_references"], 2)
-        self.assertEqual(data["total_bottles"], 5)  # 2 + 3
-        self.assertEqual(data["total_value"], 80.0)  # 20 + 60
-
     def test_list_categories(self):
         """Test listing unique categories"""
         # Create categories and references
@@ -1309,11 +1248,6 @@ class AuthAPITest(TestCase):
         response = client.get("/api/refs")
         self.assertEqual(response.status_code, 401)
 
-    def test_stats_returns_401_unauthenticated(self):
-        """Stats endpoint should return 401 when not authenticated"""
-        client = Client()
-        response = client.get("/api/stats")
-        self.assertEqual(response.status_code, 401)
 
     def test_create_ref_returns_401_unauthenticated(self):
         """Create ref should return 401 when not authenticated"""

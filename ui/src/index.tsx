@@ -18,13 +18,12 @@ import {
   Typography,
   App as AntApp,
   InputNumber,
-  Statistic,
   Tooltip,
   Select,
   Spin,
   Checkbox,
 } from "antd";
-import { EditOutlined, PlusOutlined, ExportOutlined, BarChartOutlined, EyeOutlined, EyeInvisibleOutlined, LogoutOutlined, GoogleOutlined } from "@ant-design/icons";
+import { EditOutlined, PlusOutlined, ExportOutlined, EyeOutlined, EyeInvisibleOutlined, LogoutOutlined, GoogleOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 
 import { ReferenceDetails } from "@/components/reference-form";
@@ -103,7 +102,6 @@ function ReferenceTable() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [selectedReference, setSelectedReference] = React.useState<Reference | null>(null);
   const [isExportModalOpen, setIsExportModalOpen] = React.useState(false);
-  const [isStatsModalOpen, setIsStatsModalOpen] = React.useState(false);
   const [menuTemplate, setMenuTemplate] = React.useState<string>("");
   const [editingQuantity, setEditingQuantity] = React.useState<string | null>(null);
   const [quantityValue, setQuantityValue] = React.useState<number>(0);
@@ -210,12 +208,6 @@ function ReferenceTable() {
     enabled: isExportModalOpen,
   });
 
-  // Fetch stats when modal opens
-  const { data: stats } = useQuery({
-    queryKey: ["stats"],
-    queryFn: () => fetch(`${API_BASE_URL}/api/stats`).then(res => res.json()),
-    enabled: isStatsModalOpen,
-  });
 
   // Set menu template from server data
   React.useEffect(() => {
@@ -468,12 +460,6 @@ function ReferenceTable() {
         <Title level={2} style={{ margin: 0 }}>References</Title>
         <Space>
           <Button
-            icon={<BarChartOutlined />}
-            onClick={() => setIsStatsModalOpen(true)}
-          >
-            Stats
-          </Button>
-          <Button
             icon={<ExportOutlined />}
             onClick={handleExport}
           >
@@ -624,18 +610,6 @@ function ReferenceTable() {
         </Space>
       </Modal>
 
-      <Modal
-        title="Cellar Statistics"
-        open={isStatsModalOpen}
-        onCancel={() => setIsStatsModalOpen(false)}
-        footer={<Button onClick={() => setIsStatsModalOpen(false)}>Close</Button>}
-      >
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
-          <Statistic title="Total References" value={stats?.total_references || 0} />
-          <Statistic title="Total Bottles" value={stats?.total_bottles || 0} />
-          <Statistic title="Total Value" value={stats?.total_value || 0} prefix="€" precision={2} />
-        </Space>
-      </Modal>
     </div>
   );
 }

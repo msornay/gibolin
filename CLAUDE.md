@@ -67,11 +67,6 @@ make reset-with-data
 - Searches across: name, domain, category, region, appellation, format, grapes, notes
 - Config: `django.contrib.postgres` in `INSTALLED_APPS`, `simple_unaccent` in `postgres/init.sql`
 
-### Stats Endpoint (`/api/stats`)
-- Returns `total_references`, `total_bottles`, `total_value`
-- `total_value` uses average purchase price per reference × `current_quantity`
-- Average price = `sum(price × quantity) / sum(quantity)` per reference
-
 ### Retail Price
 - Each reference has `price_multiplier` (default 3) and optional `retail_price_override`
 - Computed: `ceil(avg_purchase_price × multiplier)` rounded up to nearest euro
