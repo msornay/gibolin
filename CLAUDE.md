@@ -41,7 +41,9 @@ make reset-with-data
 - Django 5 with Django Ninja for REST API
 - Main app: `cave/` - wine reference management
 - API endpoints mounted at `/api/` (see `gibolin/urls.py`)
-- Models in `cave/models.py`: Category, Region, Appellation, Reference, Purchase
+- Models in `cave/models.py`: Category, Region, Appellation, Format, Grape, Reference, Purchase
+- Grape is M2M on Reference; all others are FK lookup tables
+- Orphaned lookups (not used by any reference) are auto-deleted on ref update/delete and at container startup (`cleanup_orphaned_lookups` command)
 - All API logic in `cave/api.py` using Django Ninja schemas
 - Uses sqids for encoding reference IDs in URLs
 
@@ -49,19 +51,20 @@ make reset-with-data
 - React 18 + TypeScript + Vite
 - UI library: Ant Design
 - State: TanStack Query for server state
-- Forms: react-hook-form + zod validation
+- Forms: Ant Design Form
 - Main app in `src/index.tsx` with ReferenceTable component
-- Components in `src/components/`: ReferenceDetails form, PrintTemplate
+- Components in `src/components/`: reference-form, CreatableSelect, PrintTemplate
+- CreatableSelect: type-to-search combobox with inline creation, supports single and `mode="multiple"`
 
 ### Data Flow
 - Frontend calls Django Ninja API endpoints (`/api/refs`, `/api/categories`, etc.)
 - References use sqid-encoded IDs for public URLs
-- Categories, Regions, Appellations are lookup tables with ordering support
+- Categories, Regions, Appellations, Formats are FK lookup tables; Grapes is M2M
 
 ### Search
 - Accent-insensitive using PostgreSQL `unaccent` extension
 - Multi-word: "Macon Lave" matches records where ALL words appear (in any field)
-- Searches across: name, domain, category, region, appellation
+- Searches across: name, domain, category, region, appellation, format, grapes, notes
 - Config: `django.contrib.postgres` in `INSTALLED_APPS`, `simple_unaccent` in `postgres/init.sql`
 
 ### Stats Endpoint (`/api/stats`)

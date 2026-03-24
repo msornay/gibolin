@@ -664,7 +664,7 @@ def _build_region_list(wines, sorted_regions, sorted_appellations):
 
 
 @api.get("/export/html")
-def export_wine_menu_html(request, location: str = None):
+def export_wine_menu_html(request, location: str = None, hide_prices: bool = False):
     """Generate HTML wine menu for printing using Django template"""
 
     references = Reference.objects.filter(hidden_from_menu=False).select_related(
@@ -708,5 +708,8 @@ def export_wine_menu_html(request, location: str = None):
             "regions": _build_region_list(uncategorized_wines, regions, appellations),
         })
 
-    html_content = render_to_string("wine_menu.html", {"categories": template_categories})
+    html_content = render_to_string("wine_menu.html", {
+        "categories": template_categories,
+        "hide_prices": hide_prices,
+    })
     return HttpResponse(html_content, content_type="text/html")

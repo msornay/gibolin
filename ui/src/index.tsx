@@ -22,6 +22,7 @@ import {
   Tooltip,
   Select,
   Spin,
+  Checkbox,
 } from "antd";
 import { EditOutlined, PlusOutlined, ExportOutlined, BarChartOutlined, EyeOutlined, EyeInvisibleOutlined, LogoutOutlined, GoogleOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -108,6 +109,7 @@ function ReferenceTable() {
   const [quantityValue, setQuantityValue] = React.useState<number>(0);
   const [selectedLocation, setSelectedLocation] = React.useState<string | undefined>(undefined);
   const [exportLocation, setExportLocation] = React.useState<string | undefined>(undefined);
+  const [hideExportPrices, setHideExportPrices] = React.useState(false);
   const formRef = React.useRef<(() => void) | null>(null);
   const queryClient = useQueryClient();
 
@@ -149,10 +151,15 @@ function ReferenceTable() {
 
   const handleHtmlExport = React.useCallback(() => {
     // Open HTML export in new window for printing
-    let exportUrl = `${API_BASE_URL}/api/export/html`;
+    const params = new URLSearchParams();
     if (exportLocation) {
-      exportUrl += `?location=${encodeURIComponent(exportLocation)}`;
+      params.set("location", exportLocation);
     }
+    if (hideExportPrices) {
+      params.set("hide_prices", "true");
+    }
+    const query = params.toString();
+    const exportUrl = `${API_BASE_URL}/api/export/html${query ? `?${query}` : ""}`;
     const printWindow = window.open(exportUrl, '_blank');
 
     if (printWindow) {
@@ -166,7 +173,7 @@ function ReferenceTable() {
 
     // Close the modal
     setIsExportModalOpen(false);
-  }, [exportLocation]);
+  }, [exportLocation, hideExportPrices]);
 
   // Debounce search to prevent excessive API calls
   React.useEffect(() => {
@@ -580,6 +587,15 @@ function ReferenceTable() {
               style={{ width: '100%' }}
             />
           </div>
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <Checkbox
+            checked={hideExportPrices}
+            onChange={(e) => setHideExportPrices(e.target.checked)}
+          >
+            Hide prices
+          </Checkbox>
         </div>
 
         <div style={{ marginBottom: '16px' }}>

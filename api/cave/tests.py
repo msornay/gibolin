@@ -1239,6 +1239,35 @@ class ExportWineMenuLocationFilterTest(AuthenticatedTestCase):
         self.assertIn("Wine A", content)
         self.assertIn("Wine B", content)
 
+    def test_export_hide_prices(self):
+        """Test that hide_prices=true removes prices from export"""
+        ref = Reference.objects.create(
+            name="Priced Wine", category=self.cat, price_multiplier=3.00
+        )
+        Purchase.objects.create(
+            reference=ref, date="2023-06-01", quantity=6, price=10.00
+        )
+        response = self.client.get("/api/export/html?hide_prices=true")
+        content = response.content.decode()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Priced Wine", content)
+        self.assertNotIn("€", content)
+        self.assertNotIn('class="wine-price">', content)
+
+    def test_export_show_prices_by_default(self):
+        """Test that prices are shown when hide_prices is not set"""
+        ref = Reference.objects.create(
+            name="Priced Wine", category=self.cat, price_multiplier=3.00
+        )
+        Purchase.objects.create(
+            reference=ref, date="2023-06-01", quantity=6, price=10.00
+        )
+        response = self.client.get("/api/export/html")
+        content = response.content.decode()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("€30", content)
+        self.assertIn("wine-price", content)
+
 
 class MultiUserSchemaTest(TestCase):
     """Verify each model with a user ForeignKey can be created with user=None."""
